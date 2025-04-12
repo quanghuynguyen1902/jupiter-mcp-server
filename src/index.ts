@@ -10,6 +10,7 @@ import {
   ErrorCode,
   ListToolsRequestSchema,
   McpError,
+  CallToolRequest
 } from "@modelcontextprotocol/sdk/types.js";
 import { handlers, tools } from "./tools.js";
 import { config } from "./config.js";
@@ -43,7 +44,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return { tools };
 });
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
   const handler = handlers[request.params.name];
   if (handler) {
     try {
