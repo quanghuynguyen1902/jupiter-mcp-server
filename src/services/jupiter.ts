@@ -68,7 +68,7 @@ export class JupiterService {
       logger.debug('Quote received successfully');
       return quoteData;
     } catch (error) {
-      logger.error('Error getting quote:', error);
+      logger.debug('Error getting quote:', error);
       throw new Error(`Error getting quote: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -128,7 +128,7 @@ export class JupiterService {
       logger.debug('Swap transaction built successfully');
       return swapData;
     } catch (error) {
-      logger.error('Error building swap transaction:', error);
+      logger.debug('Error building swap transaction:', error);
       throw new Error(`Error building swap transaction: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -169,7 +169,7 @@ export class JupiterService {
         });
       }
     } catch (error) {
-      logger.error('Error sending swap transaction:', error);
+      logger.debug('Error sending swap transaction:', error);
       throw new Error(`Error sending swap transaction: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -185,7 +185,7 @@ export class JupiterService {
         Transaction.from(Buffer.from(serializedTransaction, 'base64'))
       );
     } catch (error) {
-      logger.error('Error signing swap transaction:', error);
+      logger.debug('Error signing swap transaction:', error);
       throw new Error(`Failed to sign transaction: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -222,10 +222,10 @@ export class JupiterService {
       }
       
       const result = await response.json();
-      logger.info(`Transaction sent with signature: ${result.txid}`);
+      logger.debug(`Transaction sent with signature: ${result.txid}`);
       return result;
     } catch (error) {
-      logger.error('Error sending signed transaction:', error);
+      logger.debug('Error sending signed transaction:', error);
       throw new Error(`Failed to send transaction: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -241,28 +241,28 @@ export class JupiterService {
         throw new Error('Wallet not initialized. Cannot execute swap.');
       }
       
-      logger.info(`Executing swap from ${quoteInput.inputMint} to ${quoteInput.outputMint} for amount ${quoteInput.amount}`);
+      logger.debug(`Executing swap from ${quoteInput.inputMint} to ${quoteInput.outputMint} for amount ${quoteInput.amount}`);
       
       // Step 1: Get quote
       const quoteResponse = await this.getQuote(quoteInput);
-      logger.info(`Quote received, price impact: ${quoteResponse.priceImpactPct}%`);
+      logger.debug(`Quote received, price impact: ${quoteResponse.priceImpactPct}%`);
       
       // Step 2: Build transaction
       const swapTransaction = await this.buildSwapTransaction({
         quoteResponse,
         userPublicKey: walletService.publicKeyString
       });
-      logger.info('Swap transaction built successfully');
+      logger.debug('Swap transaction built successfully');
       
       // Step 3: Send transaction
       const result = await this.sendSwapTransaction({
         swapTransaction
       });
       
-      logger.info(`Swap executed successfully with signature: ${result.txid}`);
+      logger.debug(`Swap executed successfully with signature: ${result.txid}`);
       return result;
     } catch (error) {
-      logger.error('Error executing swap:', error);
+      logger.debug('Error executing swap:', error);
       throw new Error(`Error executing swap: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
