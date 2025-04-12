@@ -24,7 +24,7 @@ export const getQuoteHandler = async (input: GetQuoteInput): Promise<ToolResultS
     
     return createSuccessResponse(`Quote: ${JSON.stringify(quoteData, null, 2)}`);
   } catch (error) {
-    logger.error("Error in getQuoteHandler:", error);
+    logger.debug("Error in getQuoteHandler:", error);
     return createErrorResponse(`Error getting quote: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
@@ -42,7 +42,7 @@ export const buildSwapTransactionHandler = async (input: BuildSwapTransactionInp
     
     return createSuccessResponse(`Swap transaction: ${JSON.stringify(swapData, null, 2)}`);
   } catch (error) {
-    logger.error("Error in buildSwapTransactionHandler:", error);
+    logger.debug("Error in buildSwapTransactionHandler:", error);
     return createErrorResponse(`Error building swap transaction: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
@@ -54,7 +54,7 @@ export const sendSwapTransactionHandler = async (input: SendSwapTransactionInput
     
     return createSuccessResponse(`Swap result: ${JSON.stringify(swapResult, null, 2)}`);
   } catch (error) {
-    logger.error("Error in sendSwapTransactionHandler:", error);
+    logger.debug("Error in sendSwapTransactionHandler:", error);
     return createErrorResponse(`Error sending swap transaction: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
@@ -82,7 +82,7 @@ export const executeSwapHandler = async (input: GetQuoteInput): Promise<ToolResu
     
     return createSuccessResponse(`Swap executed successfully! Transaction signature: ${result.txid}\n\nDetails: ${JSON.stringify(result, null, 2)}`);
   } catch (error) {
-    logger.error("Error in executeSwapHandler:", error);
+    logger.debug("Error in executeSwapHandler:", error);
     return createErrorResponse(`Error executing swap: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
