@@ -16,9 +16,9 @@ import { walletService } from "./services/wallet.js";
 // Initialize wallet service if private key is provided
 const walletInitialized = walletService.initialize();
 if (walletInitialized) {
-  logger.info(`Wallet initialized successfully with public key: ${walletService.publicKeyString}`);
+  logger.debug(`Wallet initialized successfully with public key: ${walletService.publicKeyString}`);
 } else {
-  logger.warn('Wallet not initialized. Automatic swap execution will not be available.');
+  logger.debug('Wallet not initialized. Automatic swap execution will not be available.');
 }
 
 // Create and configure the server
@@ -45,8 +45,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (handler) {
     try {
       const input = request.params.arguments;
-      logger.info(`Handling request for tool: ${request.params.name}`);
-      logger.debug(`Request parameters:`, input);
+      logger.debug(`Handling request for tool: ${request.params.name}`);
       return await handler(input);
     } catch (error) {
       logger.error(`Error in handler ${request.params.name}:`, error);
@@ -66,5 +65,4 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   };
 });
 
-logger.info(`${config.server.name} v${config.server.version} started on network: ${config.solana.network}`);
-logger.info(`Using RPC endpoint: ${config.solana.rpcEndpoint}`);
+logger.debug(`${config.server.name} v${config.server.version} started on network: ${config.solana.network}`);
