@@ -17,6 +17,18 @@ The MCP server exposes several tools to Claude:
 
 ## Installation
 
+### From npm (recommended)
+
+```bash
+# Install globally
+npm install -g jupiter-mcp-server
+
+# Or use with npx
+npx jupiter-mcp-server
+```
+
+### From source
+
 1. Clone this repository:
    ```bash
    git clone https://github.com/quanghuynguyen1902/jupiter-mcp-server.git
@@ -33,17 +45,10 @@ The MCP server exposes several tools to Claude:
    npm run build
    ```
 
-### Global Installation
-
-You can also install the package globally or use it directly with npx:
-
-```bash
-# Install globally
-npm install -g ./
-
-# Or use directly with npx
-npx ./
-```
+4. Install globally (optional):
+   ```bash
+   npm install -g ./
+   ```
 
 ## Configuration
 
@@ -63,6 +68,19 @@ To configure Claude Desktop to use this MCP server:
 {
   "mcpServers": {
     "jupiter-mcp-server": {
+      "command": "jupiter-mcp-server",
+      "args": []
+    }
+  }
+}
+```
+
+If you've installed from source and want to run the local version, use:
+
+```json
+{
+  "mcpServers": {
+    "jupiter-mcp-server": {
       "command": "node",
       "args": [
         "/path/to/your/jupiter-mcp-server/build/index.js"
@@ -72,30 +90,17 @@ To configure Claude Desktop to use this MCP server:
 }
 ```
 
-If you've installed the package globally, you can configure it like this:
-
-```json
-{
-  "mcpServers": {
-    "jupiter-mcp-server": {
-      "command": "jupiter-mcp-server",
-      "args": []
-    }
-  }
-}
-```
-
 ### Running Locally
 
 ```bash
-# If installed locally
-node build/index.js
-
 # If installed globally
 jupiter-mcp-server
 
+# If installed from source
+node build/index.js
+
 # Using npx
-npx ./
+npx jupiter-mcp-server
 ```
 
 ## Usage
@@ -139,6 +144,27 @@ npm run build
 
 ```bash
 npm test
+```
+
+### Publishing to npm
+
+Make sure you're logged in to npm:
+
+```bash
+npm login
+```
+
+Then publish the package:
+
+```bash
+npm publish
+```
+
+To publish a new version, first update the version in package.json:
+
+```bash
+npm version patch  # or minor, or major
+npm publish
 ```
 
 ## License
