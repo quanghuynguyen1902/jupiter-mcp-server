@@ -11,16 +11,24 @@ export interface GetQuoteInput {
   platformFeeBps?: number;
 }
 
+export interface PriorityLevel {
+  priorityLevelWithMaxLamports: {
+    maxLamports: number;
+    priorityLevel: 'low' | 'medium' | 'high' | 'veryHigh';
+  };
+}
+
 export interface BuildSwapTransactionInput {
-  quoteResponse: string;
+  quoteResponse: string | any;
   userPublicKey: string;
-  prioritizationFeeLamports?: number;
+  prioritizationFeeLamports?: number | PriorityLevel;
   computeUnitPriceMicroLamports?: number;
   asLegacyTransaction?: boolean;
+  dynamicComputeUnitLimit?: boolean;
 }
 
 export interface SendSwapTransactionInput {
-  swapTransaction: string;
+  swapTransaction: string | any;
   serializedTransaction?: string;
   skipPreflight?: boolean;
   maxRetries?: number;
@@ -28,3 +36,11 @@ export interface SendSwapTransactionInput {
 
 // Type alias for executive swap, which uses the same input as GetQuoteInput
 export type ExecuteSwapInput = GetQuoteInput;
+
+// Response from lite-api swap endpoint
+export interface LiteApiSwapResponse {
+  transaction: string;
+  encodedTransaction?: string;
+  needsSignature?: boolean;
+  signers?: string[];
+}
