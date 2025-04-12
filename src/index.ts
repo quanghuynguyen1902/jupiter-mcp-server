@@ -41,16 +41,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  // Check API key if configured
-  if (config.security.apiKey && request.params.authentication?.apiKey !== config.security.apiKey) {
-    logger.warn(`Unauthorized API request for ${request.params.name}`);
-    return { 
-      toolResult: { error: "Unauthorized: Invalid API key" }, 
-      content: [], 
-      isError: true 
-    };
-  }
-
   const handler = handlers[request.params.name];
   if (handler) {
     try {
