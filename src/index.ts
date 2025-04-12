@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Import fetch polyfill first
+import './utils/fetch.js';
+
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
