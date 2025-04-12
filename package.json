@@ -1,0 +1,36 @@
+{
+  "name": "jupiter-mcp-server",
+  "version": "0.1.0",
+  "description": "A Model Context Protocol server for Jupiter Swap on Solana",
+  "license": "MIT",
+  "author": "Your Name",
+  "bugs": "https://github.com/quanghuynguyen1902/jupiter-mcp-server/issues",
+  "homepage": "https://github.com/quanghuynguyen1902/jupiter-mcp-server",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quanghuynguyen1902/jupiter-mcp-server.git"
+  },
+  "type": "module",
+  "bin": {
+    "jupiter-mcp-server": "build/index.js"
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector build/index.js",
+    "test": "npm run build && TEST_MODE=true node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "@solana/web3.js": "^1.87.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "typescript": "^5.8.2",
+    "tsx": "^4.7.0"
+  }
+}
