@@ -76,7 +76,6 @@ To configure Claude Desktop to use this MCP server with environment variables fo
         "SOLANA_PRIVATE_KEY": "your_private_key_in_base58_format",
         "SOLANA_RPC_ENDPOINT": "https://api.mainnet-beta.solana.com",
         "SOLANA_NETWORK": "mainnet-beta",
-        "API_KEY": "your_optional_api_key",
         "LOG_LEVEL": "info"
       }
     }
@@ -98,7 +97,6 @@ If you've installed from source and want to run the local version, use:
         "SOLANA_PRIVATE_KEY": "your_private_key_in_base58_format",
         "SOLANA_RPC_ENDPOINT": "https://api.mainnet-beta.solana.com",
         "SOLANA_NETWORK": "mainnet-beta",
-        "API_KEY": "your_optional_api_key",
         "LOG_LEVEL": "info"
       }
     }
@@ -111,7 +109,6 @@ If you've installed from source and want to run the local version, use:
 - **SOLANA_PRIVATE_KEY** (required for automatic swap): Your Solana wallet private key in base58 format
 - **SOLANA_RPC_ENDPOINT** (optional): RPC endpoint URL, defaults to mainnet public endpoint
 - **SOLANA_NETWORK** (optional): 'mainnet-beta', 'testnet', or 'devnet', defaults to 'mainnet-beta'
-- **API_KEY** (optional): Security key for additional protection
 - **LOG_LEVEL** (optional): 'error', 'warn', 'info', or 'debug', defaults to 'info'
 
 ### Alternative: Using a .env File
@@ -122,7 +119,6 @@ If you're running the server directly (not through Claude Desktop), you can crea
 SOLANA_PRIVATE_KEY=your_private_key_in_base58_format
 SOLANA_RPC_ENDPOINT=https://api.mainnet-beta.solana.com
 SOLANA_NETWORK=mainnet-beta
-API_KEY=your_optional_api_key
 LOG_LEVEL=info
 ```
 
@@ -173,16 +169,6 @@ If you've configured your environment with a Solana private key, Claude can now 
 4. Send the transaction to the network
 
 All in one step!
-
-### Security Considerations
-
-When using automatic swap execution:
-
-- **NEVER share your Claude configuration file containing your private key**
-- Keep your private key secure
-- Consider using a dedicated wallet with limited funds for this purpose
-- Set appropriate slippage parameters to avoid unexpected outcomes
-- Consider adding API key protection by setting the `API_KEY` environment variable
 
 ## Development
 
