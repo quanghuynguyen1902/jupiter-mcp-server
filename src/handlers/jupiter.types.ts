@@ -25,3 +25,6 @@ export interface SendSwapTransactionInput {
   skipPreflight?: boolean;
   maxRetries?: number;
 }
+
+// Type alias for executive swap, which uses the same input as GetQuoteInput
+export type ExecuteSwapInput = GetQuoteInput;
