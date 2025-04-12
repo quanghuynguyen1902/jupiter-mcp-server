@@ -52,7 +52,6 @@ interface ExecuteResponse {
  */
 export class V1ApiClient {
   private readonly baseUrl: string = "https://lite-api.jup.ag/v1";
-  private readonly quoteUrl: string = "https://quote-api.jup.ag/v6";
   
   /**
    * Get a quote for swapping tokens using V1 API
@@ -61,7 +60,7 @@ export class V1ApiClient {
    */
   async getQuote(params: QuoteParams): Promise<QuoteResponse> {
     try {
-      const url = new URL(`${this.quoteUrl}/quote`);
+      const url = new URL(`${this.baseUrl}/quote`);
       url.searchParams.append("inputMint", params.inputMint);
       url.searchParams.append("outputMint", params.outputMint);
       url.searchParams.append("amount", params.amount.toString());
