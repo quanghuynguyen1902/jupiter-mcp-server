@@ -33,11 +33,15 @@ export const config = {
   }
 };
 
-// Log configuration (excluding sensitive data)
-logger.debug('Server configuration:', {
-  ...config,
-  solana: {
-    ...config.solana,
-    privateKey: config.solana.privateKey ? '***REDACTED***' : 'Not provided',
-  }
-});
+// Only log in debug mode to avoid interfering with MCP protocol
+if (process.env.LOG_LEVEL === 'debug') {
+  logger.debug('Server configuration:', {
+    server: config.server,
+    solana: {
+      network: config.solana.network,
+      rpcEndpoint: config.solana.rpcEndpoint,
+      privateKey: config.solana.privateKey ? '***REDACTED***' : 'Not provided',
+    },
+    jupiter: config.jupiter
+  });
+}
