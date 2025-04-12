@@ -11,6 +11,14 @@ The MCP server exposes several tools to Claude:
 - `jupiter_send_swap_transaction`: Send a swap transaction on Jupiter
 - `jupiter_execute_swap`: Execute a complete swap using a wallet private key from environment variables
 
+## API Implementation
+
+This server uses two Jupiter APIs:
+- **Quote API v6** (`https://quote-api.jup.ag/v6`) for getting swap quotes
+- **Lite API v1** (`https://lite-api.jup.ag/swap/v1`) for executing swaps
+
+The Lite API provides a simplified interface for building and executing swaps in a single request, which improves reliability.
+
 ## Prerequisites
 
 - Node.js (v16 or higher)
@@ -169,6 +177,15 @@ If you've configured your environment with a Solana private key, Claude can now 
 4. Send the transaction to the network
 
 All in one step!
+
+## Troubleshooting
+
+If you encounter errors during swap execution:
+
+1. Set `LOG_LEVEL=debug` in your environment variables to get detailed logs
+2. Check that you have provided a valid Solana private key
+3. Ensure your wallet has sufficient SOL for the swap and transaction fees
+4. Verify that you are using the correct input and output token mints
 
 ## Development
 
