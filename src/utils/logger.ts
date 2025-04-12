@@ -24,6 +24,7 @@ const parseLogLevel = (level: string): LogLevel => {
 // Get log level from environment or default to INFO
 const currentLogLevel = parseLogLevel(process.env.LOG_LEVEL || 'info');
 
+// Use stderr for all logging to avoid interfering with stdout JSON communication
 export const logger = {
   error: (message: string, data?: any) => {
     if (currentLogLevel >= LogLevel.ERROR) {
@@ -33,19 +34,19 @@ export const logger = {
   
   warn: (message: string, data?: any) => {
     if (currentLogLevel >= LogLevel.WARN) {
-      console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, data || '');
+      console.error(`[WARN] ${new Date().toISOString()} - ${message}`, data || '');
     }
   },
   
   info: (message: string, data?: any) => {
     if (currentLogLevel >= LogLevel.INFO) {
-      console.log(`[INFO] ${new Date().toISOString()} - ${message}`, data || '');
+      console.error(`[INFO] ${new Date().toISOString()} - ${message}`, data || '');
     }
   },
   
   debug: (message: string, data?: any) => {
     if (currentLogLevel >= LogLevel.DEBUG) {
-      console.log(`[DEBUG] ${new Date().toISOString()} - ${message}`, data || '');
+      console.error(`[DEBUG] ${new Date().toISOString()} - ${message}`, data || '');
     }
   }
 };
