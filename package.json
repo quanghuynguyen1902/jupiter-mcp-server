@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "A Model Context Protocol server for Jupiter Swap on Solana",
   "license": "MIT",
-  "author": "Your Name",
+  "author": "Huy Nguyen Quang",
   "bugs": "https://github.com/quanghuynguyen1902/jupiter-mcp-server/issues",
   "homepage": "https://github.com/quanghuynguyen1902/jupiter-mcp-server",
   "repository": {
@@ -14,8 +14,18 @@
   "bin": {
     "jupiter-mcp-server": "build/index.js"
   },
+  "main": "build/index.js",
   "files": [
     "build"
+  ],
+  "keywords": [
+    "claude",
+    "mcp",
+    "jupiter",
+    "solana",
+    "swap",
+    "defi",
+    "model-context-protocol"
   ],
   "scripts": {
     "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
@@ -32,5 +42,8 @@
     "@types/node": "^20.11.24",
     "typescript": "^5.8.2",
     "tsx": "^4.7.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
