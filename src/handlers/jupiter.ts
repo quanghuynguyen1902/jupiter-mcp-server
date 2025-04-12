@@ -80,7 +80,11 @@ export const executeSwapHandler = async (input: GetQuoteInput): Promise<ToolResu
     // Use the wallet service to execute the complete swap flow
     const result = await jupiterService.executeSwap(input);
     
-    return createSuccessResponse(`Swap executed successfully! Transaction signature: ${result.txid}\n\nDetails: ${JSON.stringify(result, null, 2)}`);
+    if (result.txid) {
+      return createSuccessResponse(`Swap executed successfully! Transaction signature: ${result.txid}\n\nDetails: ${JSON.stringify(result.swapData || {}, null, 2)}`);
+    } else {
+      return createSuccessResponse(`Swap executed: ${JSON.stringify(result, null, 2)}`);
+    }
   } catch (error) {
     logger.debug("Error in executeSwapHandler:", error);
     return createErrorResponse(`Error executing swap: ${error instanceof Error ? error.message : String(error)}`);
