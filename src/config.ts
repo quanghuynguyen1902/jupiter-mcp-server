@@ -29,8 +29,8 @@ export const config = {
     privateKey: process.env.SOLANA_PRIVATE_KEY || '',
   },
   jupiter: {
-    apiBaseUrl: 'https://api.jup.ag/v6',
-    liteApiBaseUrl: 'https://api.jup.ag/v6'
+    apiBaseUrl: 'https://quote-api.jup.ag/v6',
+    liteApiBaseUrl: 'https://lite-api.jup.ag/v1'
   }
 };
 
