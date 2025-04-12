@@ -22,6 +22,7 @@ export const createPublicKey = (publicKeyString: string): { publicKey?: PublicKe
  */
 export const createErrorResponse = (message: string): ToolResultSchema => {
   return {
+    toolResult: { error: message },
     content: [{
       type: "text",
       text: message
@@ -37,6 +38,7 @@ export const createErrorResponse = (message: string): ToolResultSchema => {
  */
 export const createSuccessResponse = (message: string): ToolResultSchema => {
   return {
+    toolResult: { success: true },
     content: [{
       type: "text",
       text: message
