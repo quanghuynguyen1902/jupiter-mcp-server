@@ -16,7 +16,7 @@ class WalletService {
   initialize(): boolean {
     try {
       if (!config.solana.privateKey) {
-        logger.warn('No private key provided in environment variables. Wallet features will be disabled.');
+        logger.debug('No private key provided in environment variables. Wallet features will be disabled.');
         return false;
       }
       
@@ -27,10 +27,10 @@ class WalletService {
       // Initialize connection
       this._connection = new Connection(config.solana.rpcEndpoint, 'confirmed');
       
-      logger.info(`Wallet initialized with public key: ${this.publicKey.toString()}`);
+      logger.debug(`Wallet initialized with public key: ${this.publicKey.toString()}`);
       return true;
     } catch (error) {
-      logger.error('Failed to initialize wallet:', error);
+      logger.debug('Failed to initialize wallet:', error);
       return false;
     }
   }
@@ -88,7 +88,7 @@ class WalletService {
         return transaction.serialize().toString('base64');
       }
     } catch (error) {
-      logger.error('Error signing transaction:', error);
+      logger.debug('Error signing transaction:', error);
       throw new Error(`Failed to sign transaction: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -114,10 +114,10 @@ class WalletService {
         maxRetries: options.maxRetries || 3,
       });
       
-      logger.info(`Transaction sent with signature: ${signature}`);
+      logger.debug(`Transaction sent with signature: ${signature}`);
       return signature;
     } catch (error) {
-      logger.error('Error sending transaction:', error);
+      logger.debug('Error sending transaction:', error);
       throw new Error(`Failed to send transaction: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
