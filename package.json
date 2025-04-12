@@ -1,51 +1,37 @@
 {
   "name": "jupiter-mcp-server",
-  "version": "0.1.0",
-  "description": "A Model Context Protocol server for Jupiter Swap on Solana",
-  "license": "MIT",
-  "author": "Huy Nguyen Quang",
-  "bugs": "https://github.com/quanghuynguyen1902/jupiter-mcp-server/issues",
-  "homepage": "https://github.com/quanghuynguyen1902/jupiter-mcp-server",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/quanghuynguyen1902/jupiter-mcp-server.git"
-  },
+  "version": "1.0.0",
+  "description": "Model Context Protocol server providing Claude AI with access to Jupiter's swap API on Solana",
+  "main": "build/index.js",
   "type": "module",
+  "scripts": {
+    "start": "node build/index.js",
+    "build": "tsc",
+    "test": "vitest run",
+    "dev": "tsc -w"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.75.0",
+    "bs58": "^5.0.0",
+    "dotenv": "^16.0.3",
+    "node-fetch": "^3.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^18.16.3",
+    "typescript": "^5.0.4",
+    "vitest": "^0.30.1"
+  },
   "bin": {
     "jupiter-mcp-server": "build/index.js"
   },
-  "main": "build/index.js",
-  "files": [
-    "build"
-  ],
   "keywords": [
-    "claude",
-    "mcp",
     "jupiter",
     "solana",
     "swap",
-    "defi",
-    "model-context-protocol"
+    "claude",
+    "anthropic",
+    "mcp"
   ],
-  "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
-    "prepare": "npm run build",
-    "watch": "tsc --watch",
-    "inspector": "npx @modelcontextprotocol/inspector build/index.js",
-    "test": "npm run build && TEST_MODE=true node --test tests/*.test.js"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.6.1",
-    "@solana/web3.js": "^1.87.6",
-    "dotenv": "^16.3.1",
-    "bs58": "^5.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.11.24",
-    "typescript": "^5.8.2",
-    "tsx": "^4.7.0"
-  },
-  "engines": {
-    "node": ">=16.0.0"
-  }
+  "author": "quanghuynguyen1902",
+  "license": "MIT"
 }
