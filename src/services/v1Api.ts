@@ -184,7 +184,15 @@ export class V1ApiClient {
       const transaction = VersionedTransaction.deserialize(transactionBinary);
       
       // Step 4: Sign the transaction with the wallet
-      transaction.sign([walletService.keypair]);
+      // We need to access the private keypair
+      if (!walletService.isInitialized) {
+        throw new Error('Wallet not initialized');
+      }
+      
+      // Extract the keypair from bs58-encoded private key
+      const decodedKey = bs58.decode(config.solana.privateKey);
+      const keypair = Keypair.fromSecretKey(decodedKey);
+      transaction.sign([keypair]);
       
       // Step 5: Serialize the transaction back to binary format
       const signedTransactionBinary = transaction.serialize();
@@ -192,7 +200,7 @@ export class V1ApiClient {
       // Step 6: Send the transaction
       logger.debug('Sending signed transaction to Solana network...');
       const connection = new Connection(
-        config.rpcEndpoint,
+        config.solana.rpcEndpoint,
         'confirmed'
       );
       
@@ -222,6 +230,9 @@ export class V1ApiClient {
     }
   }
 }
+
+// Import bs58 for decoding private keys
+import bs58 from 'bs58';
 
 // Singleton instance
 export const v1ApiClient = new V1ApiClient();
