@@ -1,0 +1,33 @@
+# Source
+src/
+
+# Tests
+tests/
+
+# Config files
+tsconfig.json
+
+# Git files
+.git/
+.gitignore
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependency directories
+node_modules/
+
+# npm Pack output
+*.tgz
+
+# Misc
+.DS_Store
+Thumbs.db
