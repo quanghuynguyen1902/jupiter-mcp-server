@@ -19,8 +19,20 @@ export const getQuoteHandler = async (input: GetQuoteInput): Promise<ToolResultS
       return outputMintResult;
     }
     
+    // Ensure amount is an integer
+    const parsedAmount = parseInt(input.amount, 10);
+    if (isNaN(parsedAmount)) {
+      return createErrorResponse("Invalid amount. Please provide a valid number.");
+    }
+    
+    // Create a new input with parsed integer amount
+    const parsedInput = {
+      ...input,
+      amount: parsedAmount.toString()
+    };
+    
     // Use the Jupiter service to get the quote
-    const quoteData = await jupiterService.getQuote(input);
+    const quoteData = await jupiterService.getQuote(parsedInput);
     
     return createSuccessResponse(`Quote: ${JSON.stringify(quoteData, null, 2)}`);
   } catch (error) {
@@ -77,8 +89,20 @@ export const executeSwapHandler = async (input: GetQuoteInput): Promise<ToolResu
       return outputMintResult;
     }
     
+    // Ensure amount is an integer
+    const parsedAmount = parseInt(input.amount, 10);
+    if (isNaN(parsedAmount)) {
+      return createErrorResponse("Invalid amount. Please provide a valid number.");
+    }
+    
+    // Create a new input with parsed integer amount
+    const parsedInput = {
+      ...input,
+      amount: parsedAmount.toString()
+    };
+    
     // Use the wallet service to execute the complete swap flow
-    const result = await jupiterService.executeSwap(input);
+    const result = await jupiterService.executeSwap(parsedInput);
     
     if (result.txid) {
       return createSuccessResponse(`Swap executed successfully! Transaction signature: ${result.txid}\n\nDetails: ${JSON.stringify(result.swapData || {}, null, 2)}`);
