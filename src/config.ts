@@ -30,9 +30,6 @@ export const config = {
   },
   jupiter: {
     apiBaseUrl: 'https://quote-api.jup.ag/v6',
-  },
-  security: {
-    apiKey: process.env.API_KEY || '',
   }
 };
 
@@ -42,8 +39,5 @@ logger.debug('Server configuration:', {
   solana: {
     ...config.solana,
     privateKey: config.solana.privateKey ? '***REDACTED***' : 'Not provided',
-  },
-  security: {
-    apiKey: config.security.apiKey ? '***REDACTED***' : 'Not provided',
-  },
+  }
 });
