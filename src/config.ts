@@ -30,6 +30,7 @@ export const config = {
   },
   jupiter: {
     apiBaseUrl: 'https://quote-api.jup.ag/v6',
+    liteApiBaseUrl: 'https://lite-api.jup.ag/swap/v1'
   }
 };
 
