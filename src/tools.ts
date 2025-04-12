@@ -1,4 +1,4 @@
-import { getQuoteHandler, buildSwapTransactionHandler, sendSwapTransactionHandler } from "./handlers/jupiter.js";
+import { getQuoteHandler, buildSwapTransactionHandler, sendSwapTransactionHandler, executeSwapHandler } from "./handlers/jupiter.js";
 
 export const tools = [
   {
@@ -51,6 +51,22 @@ export const tools = [
         maxRetries: { type: "number" }
       }
     }
+  },
+  {
+    name: "jupiter_execute_swap",
+    description: "Execute a complete swap using wallet private key from environment variables",
+    inputSchema: {
+      type: "object",
+      properties: {
+        inputMint: { type: "string" },
+        outputMint: { type: "string" },
+        amount: { type: "string" },
+        slippageBps: { type: "number" },
+        onlyDirectRoutes: { type: "boolean" },
+        swapMode: { type: "string" }
+      },
+      required: ["inputMint", "outputMint", "amount"]
+    }
   }
 ];
 
@@ -59,5 +75,6 @@ type handlerDictionary = Record<typeof tools[number]["name"], (input: any) => an
 export const handlers: handlerDictionary = {
   "jupiter_get_quote": getQuoteHandler,
   "jupiter_build_swap_transaction": buildSwapTransactionHandler,
-  "jupiter_send_swap_transaction": sendSwapTransactionHandler
+  "jupiter_send_swap_transaction": sendSwapTransactionHandler,
+  "jupiter_execute_swap": executeSwapHandler
 };
