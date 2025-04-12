@@ -3,6 +3,8 @@ import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { walletService } from './wallet.js';
 import { GetQuoteInput, BuildSwapTransactionInput, SendSwapTransactionInput } from '../handlers/jupiter.types.js';
+// Ensure fetch is available
+import '../utils/fetch.js';
 
 /**
  * Service for interacting with Jupiter API
