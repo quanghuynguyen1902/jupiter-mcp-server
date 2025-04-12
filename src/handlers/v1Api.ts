@@ -32,12 +32,18 @@ export const executeV1SwapHandler = async (input: GetQuoteInput): Promise<ToolRe
     // Parse the slippage if provided or use default
     const slippageBps = input.slippageBps || 50; // Default to 0.5%
     
+    // Ensure amount is an integer
+    const amount = parseInt(input.amount, 10);
+    if (isNaN(amount)) {
+      return createErrorResponse("Invalid amount. Please provide a valid number.");
+    }
+    
     // Use the V1 API client to execute the complete swap flow
-    logger.debug(`Executing V1 API swap from ${input.inputMint} to ${input.outputMint} for amount ${input.amount}`);
+    logger.debug(`Executing V1 API swap from ${input.inputMint} to ${input.outputMint} for amount ${amount}`);
     const result = await v1ApiClient.completeSwap(
       input.inputMint,
       input.outputMint,
-      input.amount,
+      amount,
       slippageBps
     );
     
@@ -69,12 +75,18 @@ export const getV1QuoteHandler = async (input: GetQuoteInput): Promise<ToolResul
     // Parse the slippage if provided or use default
     const slippageBps = input.slippageBps || 50; // Default to 0.5%
     
+    // Ensure amount is an integer
+    const amount = parseInt(input.amount, 10);
+    if (isNaN(amount)) {
+      return createErrorResponse("Invalid amount. Please provide a valid number.");
+    }
+    
     // Use the V1 API client to get a quote
-    logger.debug(`Getting V1 API quote from ${input.inputMint} to ${input.outputMint} for amount ${input.amount}`);
+    logger.debug(`Getting V1 API quote from ${input.inputMint} to ${input.outputMint} for amount ${amount}`);
     const quoteData = await v1ApiClient.getQuote({
       inputMint: input.inputMint,
       outputMint: input.outputMint,
-      amount: input.amount,
+      amount,
       slippageBps,
       restrictIntermediateTokens: input.onlyDirectRoutes !== true
     });
