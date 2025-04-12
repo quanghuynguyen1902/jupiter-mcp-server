@@ -54,34 +54,9 @@ npx jupiter-mcp-server
 
 ## Configuration
 
-### Environment Variables
+### Configure Claude Desktop with Environment Variables
 
-Create a `.env` file in the root directory of the project with the following variables:
-
-```
-# Required for automatic swap execution
-SOLANA_PRIVATE_KEY=your_private_key_in_base58_format
-
-# Optional - defaults to Solana mainnet
-SOLANA_RPC_ENDPOINT=https://api.mainnet-beta.solana.com
-SOLANA_NETWORK=mainnet-beta
-
-# Optional security
-API_KEY=your_api_key_for_additional_security
-
-# Optional logging
-LOG_LEVEL=info  # Options: error, warn, info, debug
-```
-
-You can copy `.env.example` to `.env` and fill in your values:
-
-```bash
-cp .env.example .env
-```
-
-### Configure Claude Desktop
-
-To configure Claude Desktop to use this MCP server:
+To configure Claude Desktop to use this MCP server with environment variables for automatic swap execution:
 
 1. Open Claude Desktop
 2. Navigate to the Claude Desktop configuration file:
@@ -89,14 +64,21 @@ To configure Claude Desktop to use this MCP server:
    - Windows: `%APPDATA%\\Claude\\claude_desktop_config.json`
    - Linux: `~/.config/Claude/claude_desktop_config.json`
 
-3. Add the MCP server configuration:
+3. Add the MCP server configuration with environment variables:
 
 ```json
 {
   "mcpServers": {
     "jupiter-mcp-server": {
       "command": "jupiter-mcp-server",
-      "args": []
+      "args": [],
+      "env": {
+        "SOLANA_PRIVATE_KEY": "your_private_key_in_base58_format",
+        "SOLANA_RPC_ENDPOINT": "https://api.mainnet-beta.solana.com",
+        "SOLANA_NETWORK": "mainnet-beta",
+        "API_KEY": "your_optional_api_key",
+        "LOG_LEVEL": "info"
+      }
     }
   }
 }
@@ -111,10 +93,37 @@ If you've installed from source and want to run the local version, use:
       "command": "node",
       "args": [
         "/path/to/your/jupiter-mcp-server/build/index.js"
-      ]
+      ],
+      "env": {
+        "SOLANA_PRIVATE_KEY": "your_private_key_in_base58_format",
+        "SOLANA_RPC_ENDPOINT": "https://api.mainnet-beta.solana.com",
+        "SOLANA_NETWORK": "mainnet-beta",
+        "API_KEY": "your_optional_api_key",
+        "LOG_LEVEL": "info"
+      }
     }
   }
 }
+```
+
+### Environment Variables Description
+
+- **SOLANA_PRIVATE_KEY** (required for automatic swap): Your Solana wallet private key in base58 format
+- **SOLANA_RPC_ENDPOINT** (optional): RPC endpoint URL, defaults to mainnet public endpoint
+- **SOLANA_NETWORK** (optional): 'mainnet-beta', 'testnet', or 'devnet', defaults to 'mainnet-beta'
+- **API_KEY** (optional): Security key for additional protection
+- **LOG_LEVEL** (optional): 'error', 'warn', 'info', or 'debug', defaults to 'info'
+
+### Alternative: Using a .env File
+
+If you're running the server directly (not through Claude Desktop), you can create a `.env` file in the root directory with the same variables:
+
+```
+SOLANA_PRIVATE_KEY=your_private_key_in_base58_format
+SOLANA_RPC_ENDPOINT=https://api.mainnet-beta.solana.com
+SOLANA_NETWORK=mainnet-beta
+API_KEY=your_optional_api_key
+LOG_LEVEL=info
 ```
 
 ### Running Locally
@@ -156,7 +165,7 @@ Once configured, restart Claude Desktop. Claude will now have access to the Jupi
 
 ## Automatic Swap Execution
 
-If you've configured your environment with a Solana private key, Claude can now execute swaps directly without requiring you to sign transactions manually. This feature uses the private key from your `.env` file to:
+If you've configured your environment with a Solana private key, Claude can now execute swaps directly without requiring you to sign transactions manually. This feature uses the private key from your environment to:
 
 1. Get a quote for the swap
 2. Build the transaction
@@ -169,8 +178,8 @@ All in one step!
 
 When using automatic swap execution:
 
-- **NEVER share your `.env` file or private key**
-- Keep your private key secure and do not commit it to version control
+- **NEVER share your Claude configuration file containing your private key**
+- Keep your private key secure
 - Consider using a dedicated wallet with limited funds for this purpose
 - Set appropriate slippage parameters to avoid unexpected outcomes
 - Consider adding API key protection by setting the `API_KEY` environment variable
