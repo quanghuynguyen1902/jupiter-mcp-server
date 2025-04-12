@@ -9,9 +9,11 @@ import { GetQuoteInput, BuildSwapTransactionInput, SendSwapTransactionInput } fr
  */
 export class JupiterService {
   private readonly apiBaseUrl: string;
+  private readonly liteApiBaseUrl: string;
   
   constructor() {
     this.apiBaseUrl = config.jupiter.apiBaseUrl;
+    this.liteApiBaseUrl = config.jupiter.liteApiBaseUrl;
   }
   
   /**
@@ -74,20 +76,20 @@ export class JupiterService {
   }
   
   /**
-   * Build a swap transaction
+   * Build a swap transaction using the lite API
    * @param input Build transaction parameters
    * @returns Swap transaction data
    */
-  async buildSwapTransaction(input: BuildSwapTransactionInput | { quoteResponse: any }): Promise<any> {
+  async buildSwapTransaction(input: BuildSwapTransactionInput | { quoteResponse: any; userPublicKey: string }): Promise<any> {
     try {
-      // Build the request body
+      // Build the request body according to the lite-api format
       const requestBody: any = {
         quoteResponse: typeof input.quoteResponse === 'string' 
           ? JSON.parse(input.quoteResponse) 
           : input.quoteResponse,
       };
       
-      // If wallet is initialized, use its public key by default
+      // Add the required userPublicKey
       if (walletService.isInitialized) {
         requestBody.userPublicKey = (input as BuildSwapTransactionInput).userPublicKey || walletService.publicKeyString;
       } else if ((input as BuildSwapTransactionInput).userPublicKey) {
@@ -96,25 +98,35 @@ export class JupiterService {
         throw new Error('No wallet initialized and no user public key provided');
       }
       
-      // Add additional parameters if available
+      // Add priority fee if available
       if ((input as BuildSwapTransactionInput).prioritizationFeeLamports !== undefined) {
-        requestBody.prioritizationFeeLamports = (input as BuildSwapTransactionInput).prioritizationFeeLamports;
+        const prioritizationFee = (input as BuildSwapTransactionInput).prioritizationFeeLamports;
+        requestBody.prioritizationFeeLamports = {
+          priorityLevelWithMaxLamports: {
+            maxLamports: prioritizationFee,
+            priorityLevel: "veryHigh"
+          }
+        };
+      } else {
+        // Add default priority fee
+        requestBody.prioritizationFeeLamports = {
+          priorityLevelWithMaxLamports: {
+            maxLamports: 10000000,
+            priorityLevel: "veryHigh"
+          }
+        };
       }
       
-      if ((input as BuildSwapTransactionInput).computeUnitPriceMicroLamports !== undefined) {
-        requestBody.computeUnitPriceMicroLamports = (input as BuildSwapTransactionInput).computeUnitPriceMicroLamports;
-      }
+      // Add compute unit limit
+      requestBody.dynamicComputeUnitLimit = true;
       
-      if ((input as BuildSwapTransactionInput).asLegacyTransaction !== undefined) {
-        requestBody.asLegacyTransaction = (input as BuildSwapTransactionInput).asLegacyTransaction;
-      }
-      
-      // Make the API request
+      // Make the API request to the swap endpoint
       logger.debug('Building swap transaction with data:', { userPublicKey: requestBody.userPublicKey });
-      const response = await fetch(`${this.apiBaseUrl}/swap-instructions`, {
+      const response = await fetch(`${this.liteApiBaseUrl}/swap`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Accept": "application/json"
         },
         body: JSON.stringify(requestBody)
       });
@@ -149,21 +161,25 @@ export class JupiterService {
         ? JSON.parse(input.swapTransaction)
         : input.swapTransaction;
       
-      // Check if we need to sign the transaction
+      // Extract the transaction data
+      const serializedTx = swapTransaction.transaction || swapTransaction.encodedTransaction;
+      
+      if (!serializedTx) {
+        throw new Error('No transaction data found in the swap transaction');
+      }
+      
+      // Sign the transaction if needed
       if (swapTransaction.needsSignature) {
-        // Deserialize the transaction
-        const serializedTx = swapTransaction.serializedTransaction;
-        // Sign the transaction with our wallet
         const signedTx = await this.signSwapTransaction(serializedTx);
         
         // Send the signed transaction
-        return this.sendSignedTransaction(signedTx, {
+        return await walletService.sendTransaction(signedTx, {
           skipPreflight: (input as SendSwapTransactionInput).skipPreflight,
           maxRetries: (input as SendSwapTransactionInput).maxRetries
         });
       } else {
         // If no signature needed, just send it directly
-        return this.sendSignedTransaction(swapTransaction.serializedTransaction, {
+        return await walletService.sendTransaction(serializedTx, {
           skipPreflight: (input as SendSwapTransactionInput).skipPreflight,
           maxRetries: (input as SendSwapTransactionInput).maxRetries
         });
@@ -191,47 +207,7 @@ export class JupiterService {
   }
   
   /**
-   * Send a signed transaction
-   * @param serializedTransaction The signed serialized transaction
-   * @param options Send options
-   * @returns Transaction result
-   */
-  private async sendSignedTransaction(
-    serializedTransaction: string,
-    options: { skipPreflight?: boolean; maxRetries?: number } = {}
-  ): Promise<any> {
-    try {
-      // Send the transaction using Jupiter API
-      const response = await fetch(`${this.apiBaseUrl}/swap`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          serializedTransaction,
-          options: {
-            skipPreflight: options.skipPreflight || false,
-            maxRetries: options.maxRetries || 3
-          }
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error sending transaction: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-      
-      const result = await response.json();
-      logger.debug(`Transaction sent with signature: ${result.txid}`);
-      return result;
-    } catch (error) {
-      logger.debug('Error sending signed transaction:', error);
-      throw new Error(`Failed to send transaction: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  /**
-   * Execute a swap with auto-build and auto-send
+   * Execute a swap with auto-build and auto-send using the lite API
    * @param quoteInput Quote input parameters
    * @returns Transaction result
    */
@@ -247,20 +223,20 @@ export class JupiterService {
       const quoteResponse = await this.getQuote(quoteInput);
       logger.debug(`Quote received, price impact: ${quoteResponse.priceImpactPct}%`);
       
-      // Step 2: Build transaction
-      const swapTransaction = await this.buildSwapTransaction({
+      // Step 2: Build transaction with the lite API
+      const swapData = await this.buildSwapTransaction({
         quoteResponse,
         userPublicKey: walletService.publicKeyString
       });
       logger.debug('Swap transaction built successfully');
       
-      // Step 3: Send transaction
-      const result = await this.sendSwapTransaction({
-        swapTransaction
-      });
+      // Step 3: Send the transaction
+      const txid = await walletService.sendTransaction(
+        swapData.transaction || swapData.encodedTransaction
+      );
       
-      logger.debug(`Swap executed successfully with signature: ${result.txid}`);
-      return result;
+      logger.debug(`Swap executed successfully with signature: ${txid}`);
+      return { txid, swapData };
     } catch (error) {
       logger.debug('Error executing swap:', error);
       throw new Error(`Error executing swap: ${error instanceof Error ? error.message : String(error)}`);
