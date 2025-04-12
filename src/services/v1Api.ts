@@ -2,6 +2,10 @@ import { Keypair, VersionedTransaction, Connection } from '@solana/web3.js';
 import { logger } from '../utils/logger.js';
 import { walletService } from './wallet.js';
 import { config } from '../config.js';
+// Import bs58 for decoding private keys
+import bs58 from 'bs58';
+// Ensure fetch is available
+import '../utils/fetch.js';
 
 interface QuoteParams {
   inputMint: string;
@@ -15,28 +19,28 @@ interface QuoteResponse {
   inputMint: string;
   outputMint: string;
   outAmount: string;
-  inAmount: string;
-  otherAmountThreshold: string;
-  swapMode: string;
-  slippageBps: number;
-  platformFee: any;
-  priceImpactPct: string;
-  routePlan: any[];
-  contextSlot: number;
+  inAmount?: string;
+  otherAmountThreshold?: string;
+  swapMode?: string;
+  slippageBps?: number;
+  platformFee?: any;
+  priceImpactPct?: string;
+  routePlan?: any[];
+  contextSlot?: number;
 }
 
 interface ExecuteResponse {
   swapTransaction: string;
-  lastValidBlockHeight: number;
-  prioritizationFeeLamports: number;
+  lastValidBlockHeight?: number;
+  prioritizationFeeLamports?: number;
   computeUnitLimit?: number;
-  prioritizationType: {
+  prioritizationType?: {
     computeBudget: {
       microLamports: number;
       estimatedMicroLamports: number;
     };
   };
-  dynamicSlippageReport: {
+  dynamicSlippageReport?: {
     slippageBps: number;
     otherAmount: number;
     simulatedIncurredSlippageBps: number;
@@ -165,7 +169,10 @@ export class V1ApiClient {
         restrictIntermediateTokens: true
       });
       
-      logger.debug(`Quote received, expected output: ${quote.outAmount}, price impact: ${quote.priceImpactPct}%`);
+      logger.debug(`Quote received, expected output: ${quote.outAmount}`);
+      if (quote.priceImpactPct) {
+        logger.debug(`Price impact: ${quote.priceImpactPct}%`);
+      }
       
       // Step 2: Execute swap
       const executeResponse = await this.executeSwap(
@@ -184,11 +191,6 @@ export class V1ApiClient {
       const transaction = VersionedTransaction.deserialize(transactionBinary);
       
       // Step 4: Sign the transaction with the wallet
-      // We need to access the private keypair
-      if (!walletService.isInitialized) {
-        throw new Error('Wallet not initialized');
-      }
-      
       // Extract the keypair from bs58-encoded private key
       const decodedKey = bs58.decode(config.solana.privateKey);
       const keypair = Keypair.fromSecretKey(decodedKey);
@@ -230,9 +232,6 @@ export class V1ApiClient {
     }
   }
 }
-
-// Import bs58 for decoding private keys
-import bs58 from 'bs58';
 
 // Singleton instance
 export const v1ApiClient = new V1ApiClient();
