@@ -147,14 +147,20 @@ export class V1ApiClient {
    * @param outputMint Output token mint address
    * @param amount Amount to swap in lamports/smallest units
    * @param slippageBps Slippage tolerance in basis points (e.g., 50 = 0.5%)
+   * @param onlyDirectRoutes Only use direct routes between input and output tokens
+   * @param dynamicComputeUnits Use dynamic compute unit estimation
+   * @param dynamicSlippage Use dynamic slippage estimation
    * @returns Transaction details including signature and confirmation
    */
   async completeSwap(
     inputMint: string,
     outputMint: string,
     amount: number | string,
-    slippageBps: number = 50
-  ): Promise<{ signature: string; confirmationStatus: string }> {
+    slippageBps: number = 50,
+    onlyDirectRoutes: boolean = false,
+    dynamicComputeUnits: boolean = true,
+    dynamicSlippage: boolean = true
+  ): Promise<{ signature: string; confirmationStatus: string; outAmount?: string; priceImpact?: string }> {
     try {
       if (!walletService.isInitialized) {
         throw new Error('Wallet not initialized. Cannot execute swap.');
@@ -166,7 +172,7 @@ export class V1ApiClient {
         outputMint,
         amount,
         slippageBps,
-        restrictIntermediateTokens: true
+        restrictIntermediateTokens: !onlyDirectRoutes
       });
       
       logger.debug(`Quote received, expected output: ${quote.outAmount}`);
@@ -178,8 +184,8 @@ export class V1ApiClient {
       const executeResponse = await this.executeSwap(
         quote,
         walletService.publicKeyString,
-        true, // dynamic compute units
-        true  // dynamic slippage
+        dynamicComputeUnits,
+        dynamicSlippage
       );
       
       if (executeResponse.simulationError !== null) {
@@ -224,7 +230,9 @@ export class V1ApiClient {
       logger.debug(`Transaction successful: ${signature}`);
       return {
         signature,
-        confirmationStatus: 'confirmed'
+        confirmationStatus: 'confirmed',
+        outAmount: quote.outAmount,
+        priceImpact: quote.priceImpactPct
       };
     } catch (error) {
       logger.error("Failed to complete V1 API swap:", error);
