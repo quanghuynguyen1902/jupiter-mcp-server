@@ -55,7 +55,7 @@ interface ExecuteResponse {
  * Jupiter V1 API Client for more optimized swap performance
  */
 export class V1ApiClient {
-  private readonly baseUrl: string = "https://lite-api.jup.ag/v1";
+  private readonly baseUrl: string = "https://lite-api.jup.ag/swap/v1";
   
   /**
    * Get a quote for swapping tokens using V1 API
