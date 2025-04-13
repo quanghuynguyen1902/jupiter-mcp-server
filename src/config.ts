@@ -29,8 +29,8 @@ export const config = {
     privateKey: process.env.SOLANA_PRIVATE_KEY || '',
   },
   jupiter: {
-    apiBaseUrl: 'https://lite-api.jup.ag/v1',
-    liteApiBaseUrl: 'https://lite-api.jup.ag/v1'
+    apiBaseUrl: 'https://lite-api.jup.ag/swap/v1',
+    liteApiBaseUrl: 'https://lite-api.jup.ag/swap/v1'
   }
 };
 
