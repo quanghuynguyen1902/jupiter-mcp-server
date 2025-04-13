@@ -1,7 +1,7 @@
 {
   "name": "jupiter-mcp-server",
-  "version": "1.1.0",
-  "description": "Model Context Protocol server providing Claude AI with access to Jupiter's optimized v1 swap API on Solana",
+  "version": "1.2.0",
+  "description": "Model Context Protocol server providing Claude AI with access to Jupiter's optimized swap API on Solana",
   "main": "build/index.js",
   "type": "module",
   "scripts": {
@@ -31,8 +31,7 @@
     "swap",
     "claude",
     "anthropic",
-    "mcp",
-    "v1api"
+    "mcp"
   ],
   "author": "quanghuynguyen1902",
   "license": "MIT"
