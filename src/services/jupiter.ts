@@ -1,248 +1,262 @@
-import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
+import { Keypair, Connection, VersionedTransaction } from '@solana/web3.js';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { walletService } from './wallet.js';
-import { GetQuoteInput, BuildSwapTransactionInput, SendSwapTransactionInput } from '../handlers/jupiter.types.js';
+import {
+  QuoteInput,
+  SwapInput,
+  QuoteResponse,
+  SwapResponse,
+  SwapResult,
+  PriorityLevel
+} from '../handlers/jupiter.types.js';
+// Import bs58 for decoding private keys
+import bs58 from 'bs58';
 // Ensure fetch is available
 import '../utils/fetch.js';
 
 /**
- * Service for interacting with Jupiter API
+ * Jupiter API service for optimized swap performance
+ * Combines the best of both v1Api and jupiter implementations
  */
 export class JupiterService {
-  private readonly apiBaseUrl: string;
-  private readonly liteApiBaseUrl: string;
+  private readonly baseUrl: string;
   
   constructor() {
-    this.apiBaseUrl = config.jupiter.apiBaseUrl;
-    this.liteApiBaseUrl = config.jupiter.liteApiBaseUrl;
+    this.baseUrl = config.jupiter.apiBaseUrl;
   }
   
   /**
    * Get a quote for swapping tokens
-   * @param input Quote parameters
+   * @param params Quote parameters
    * @returns Quote response
    */
-  async getQuote(input: GetQuoteInput): Promise<any> {
+  async getQuote(params: QuoteInput): Promise<QuoteResponse> {
     try {
-      // Build query parameters
-      const params = new URLSearchParams();
-      params.append("inputMint", input.inputMint);
-      params.append("outputMint", input.outputMint);
-      params.append("amount", input.amount);
+      const url = new URL(`${this.baseUrl}/quote`);
+      url.searchParams.append("inputMint", params.inputMint);
+      url.searchParams.append("outputMint", params.outputMint);
+      url.searchParams.append("amount", params.amount.toString());
       
-      if (input.slippageBps !== undefined) {
-        params.append("slippageBps", input.slippageBps.toString());
+      if (params.slippageBps !== undefined) {
+        url.searchParams.append("slippageBps", params.slippageBps.toString());
+      } else {
+        // Default slippage of 0.5%
+        url.searchParams.append("slippageBps", "50");
       }
       
-      if (input.onlyDirectRoutes !== undefined) {
-        params.append("onlyDirectRoutes", input.onlyDirectRoutes.toString());
+      // Handle route restrictions (direct routes setting)
+      if (params.onlyDirectRoutes === true) {
+        url.searchParams.append("onlyDirectRoutes", "true");
+      } else {
+        // By default, enable restrictIntermediateTokens for more stable routes
+        url.searchParams.append("restrictIntermediateTokens", "true");
       }
-      
-      if (input.asLegacyTransaction !== undefined) {
-        params.append("asLegacyTransaction", input.asLegacyTransaction.toString());
-      }
-      
-      if (input.maxAccounts !== undefined) {
-        params.append("maxAccounts", input.maxAccounts.toString());
-      }
-      
-      if (input.swapMode !== undefined) {
-        params.append("swapMode", input.swapMode);
-      }
-      
-      if (input.excludeDexes !== undefined && input.excludeDexes.length > 0) {
-        params.append("excludeDexes", input.excludeDexes.join(","));
-      }
-      
-      if (input.platformFeeBps !== undefined) {
-        params.append("platformFeeBps", input.platformFeeBps.toString());
-      }
-      
-      // Make the API request
-      logger.debug(`Getting quote with params: ${params.toString()}`);
-      const response = await fetch(`${this.apiBaseUrl}/quote?${params.toString()}`);
+
+      logger.debug(`Getting quote with params: ${url.toString()}`);
+      const response = await fetch(url.toString());
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Error getting quote: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
-      
-      const quoteData = await response.json();
+
+      const data: QuoteResponse = await response.json();
       logger.debug('Quote received successfully');
-      return quoteData;
+      return data;
     } catch (error) {
-      logger.debug('Error getting quote:', error);
-      throw new Error(`Error getting quote: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error("Error fetching quote:", error);
+      throw error;
     }
   }
-  
+
   /**
-   * Build a swap transaction using the lite API
-   * @param input Build transaction parameters
-   * @returns Swap transaction data
+   * Execute a swap transaction with optimized parameters
+   * @param quoteResponse Quote response from getQuote
+   * @param userPublicKey User's public key
+   * @param dynamicComputeUnitLimit Use dynamic compute unit estimation
+   * @param dynamicSlippage Use dynamic slippage estimation
+   * @returns Execute response with transaction details
    */
-  async buildSwapTransaction(input: BuildSwapTransactionInput | { quoteResponse: any; userPublicKey: string }): Promise<any> {
+  async executeSwap(
+    quoteResponse: QuoteResponse,
+    userPublicKey: string,
+    dynamicComputeUnitLimit: boolean = true,
+    dynamicSlippage: boolean = true,
+    priorityFee?: PriorityLevel
+  ): Promise<SwapResponse> {
     try {
-      // Build the request body according to the lite-api format
+      logger.debug('Building swap transaction');
+      
+      // Prepare the request body
       const requestBody: any = {
-        quoteResponse: typeof input.quoteResponse === 'string' 
-          ? JSON.parse(input.quoteResponse) 
-          : input.quoteResponse,
+        quoteResponse,
+        userPublicKey,
+        dynamicComputeUnitLimit,
+        dynamicSlippage
       };
       
-      // Add the required userPublicKey
-      if (walletService.isInitialized) {
-        requestBody.userPublicKey = (input as BuildSwapTransactionInput).userPublicKey || walletService.publicKeyString;
-      } else if ((input as BuildSwapTransactionInput).userPublicKey) {
-        requestBody.userPublicKey = (input as BuildSwapTransactionInput).userPublicKey;
+      // Add priority fee if specified, otherwise use default
+      if (priorityFee) {
+        requestBody.prioritizationFeeLamports = priorityFee;
       } else {
-        throw new Error('No wallet initialized and no user public key provided');
-      }
-      
-      // Add priority fee if available
-      if ((input as BuildSwapTransactionInput).prioritizationFeeLamports !== undefined) {
-        const prioritizationFee = (input as BuildSwapTransactionInput).prioritizationFeeLamports;
+        // Default priority fee optimization
         requestBody.prioritizationFeeLamports = {
           priorityLevelWithMaxLamports: {
-            maxLamports: prioritizationFee,
-            priorityLevel: "veryHigh"
-          }
-        };
-      } else {
-        // Add default priority fee
-        requestBody.prioritizationFeeLamports = {
-          priorityLevelWithMaxLamports: {
-            maxLamports: 10000000,
-            priorityLevel: "veryHigh"
+            maxLamports: 1000000, // Cap fee at 0.001 SOL
+            global: false, // Use local fee market for better estimation
+            priorityLevel: "veryHigh", // 75th percentile for better landing
           }
         };
       }
-      
-      // Add compute unit limit
-      requestBody.dynamicComputeUnitLimit = true;
       
       // Make the API request to the swap endpoint
-      logger.debug('Building swap transaction with data:', { userPublicKey: requestBody.userPublicKey });
-      const response = await fetch(`${this.liteApiBaseUrl}/swap`, {
+      const response = await fetch(`${this.baseUrl}/swap`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json"
         },
         body: JSON.stringify(requestBody)
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Error building swap transaction: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
-      
-      const swapData = await response.json();
+
+      const data: SwapResponse = await response.json();
       logger.debug('Swap transaction built successfully');
-      return swapData;
+      return data;
     } catch (error) {
-      logger.debug('Error building swap transaction:', error);
-      throw new Error(`Error building swap transaction: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error("Error building swap transaction:", error);
+      throw error;
     }
   }
   
   /**
-   * Send a swap transaction using the wallet service
-   * @param input Swap transaction input
-   * @returns Transaction result
+   * Execute a complete swap transaction from quote to execution
+   * @param params Swap parameters
+   * @returns Transaction details including signature and confirmation
    */
-  async sendSwapTransaction(input: SendSwapTransactionInput | { swapTransaction: any }): Promise<any> {
-    try {
-      if (!walletService.isInitialized) {
-        throw new Error('Wallet not initialized. Cannot send transaction.');
-      }
-      
-      // Parse the swap transaction if it's a string
-      const swapTransaction = typeof input.swapTransaction === 'string'
-        ? JSON.parse(input.swapTransaction)
-        : input.swapTransaction;
-      
-      // Extract the transaction data
-      const serializedTx = swapTransaction.transaction || swapTransaction.encodedTransaction;
-      
-      if (!serializedTx) {
-        throw new Error('No transaction data found in the swap transaction');
-      }
-      
-      // Sign the transaction if needed
-      if (swapTransaction.needsSignature) {
-        const signedTx = await this.signSwapTransaction(serializedTx);
-        
-        // Send the signed transaction
-        return await walletService.sendTransaction(signedTx, {
-          skipPreflight: (input as SendSwapTransactionInput).skipPreflight,
-          maxRetries: (input as SendSwapTransactionInput).maxRetries
-        });
-      } else {
-        // If no signature needed, just send it directly
-        return await walletService.sendTransaction(serializedTx, {
-          skipPreflight: (input as SendSwapTransactionInput).skipPreflight,
-          maxRetries: (input as SendSwapTransactionInput).maxRetries
-        });
-      }
-    } catch (error) {
-      logger.debug('Error sending swap transaction:', error);
-      throw new Error(`Error sending swap transaction: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  /**
-   * Sign a swap transaction with the wallet
-   * @param serializedTransaction The serialized transaction to sign
-   * @returns Signed transaction
-   */
-  private async signSwapTransaction(serializedTransaction: string): Promise<string> {
-    try {
-      return walletService.signTransaction(
-        Transaction.from(Buffer.from(serializedTransaction, 'base64'))
-      );
-    } catch (error) {
-      logger.debug('Error signing swap transaction:', error);
-      throw new Error(`Failed to sign transaction: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  /**
-   * Execute a swap with auto-build and auto-send using the lite API
-   * @param quoteInput Quote input parameters
-   * @returns Transaction result
-   */
-  async executeSwap(quoteInput: GetQuoteInput): Promise<any> {
+  async completeSwap(params: SwapInput): Promise<SwapResult> {
     try {
       if (!walletService.isInitialized) {
         throw new Error('Wallet not initialized. Cannot execute swap.');
       }
       
-      logger.debug(`Executing swap from ${quoteInput.inputMint} to ${quoteInput.outputMint} for amount ${quoteInput.amount}`);
+      // Ensure amount is a valid number
+      const amount = parseInt(params.amount, 10);
+      if (isNaN(amount)) {
+        throw new Error('Invalid amount. Please provide a valid number.');
+      }
+      
+      // Parse the slippage if provided or use default
+      const slippageBps = params.slippageBps || 50; // Default to 0.5%
+      
+      logger.debug(`Executing swap from ${params.inputMint} to ${params.outputMint} for amount ${amount}`);
       
       // Step 1: Get quote
-      const quoteResponse = await this.getQuote(quoteInput);
-      logger.debug(`Quote received, price impact: ${quoteResponse.priceImpactPct}%`);
-      
-      // Step 2: Build transaction with the lite API
-      const swapData = await this.buildSwapTransaction({
-        quoteResponse,
-        userPublicKey: walletService.publicKeyString
+      const quote = await this.getQuote({
+        inputMint: params.inputMint,
+        outputMint: params.outputMint,
+        amount: amount.toString(),
+        slippageBps,
+        onlyDirectRoutes: params.onlyDirectRoutes
       });
-      logger.debug('Swap transaction built successfully');
       
-      // Step 3: Send the transaction
-      const txid = await walletService.sendTransaction(
-        swapData.transaction || swapData.encodedTransaction
+      logger.debug(`Quote received, expected output: ${quote.outAmount}`);
+      if (quote.priceImpactPct) {
+        logger.debug(`Price impact: ${quote.priceImpactPct}%`);
+      }
+      
+      // Step 2: Execute swap
+      const executeResponse = await this.executeSwap(
+        quote,
+        walletService.publicKeyString,
+        params.dynamicComputeUnits !== false, // Default to true
+        params.dynamicSlippage !== false      // Default to true
       );
       
-      logger.debug(`Swap executed successfully with signature: ${txid}`);
-      return { txid, swapData };
+      if (executeResponse.simulationError) {
+        throw new Error(`Simulation error: ${executeResponse.simulationError}`);
+      }
+      
+      // Step 3: Deserialize the transaction
+      const transactionBinary = Buffer.from(executeResponse.swapTransaction, "base64");
+      const transaction = VersionedTransaction.deserialize(transactionBinary);
+      
+      // Step 4: Sign the transaction with the wallet
+      const decodedKey = bs58.decode(config.solana.privateKey);
+      const keypair = Keypair.fromSecretKey(decodedKey);
+      transaction.sign([keypair]);
+      
+      // Step 5: Serialize the transaction back to binary format
+      const signedTransactionBinary = transaction.serialize();
+      
+      // Step 6: Send the transaction
+      logger.debug('Sending signed transaction to Solana network...');
+      const connection = new Connection(
+        config.solana.rpcEndpoint,
+        'confirmed'
+      );
+      
+      const signature = await connection.sendRawTransaction(signedTransactionBinary, {
+        maxRetries: 2,
+        skipPreflight: true
+      });
+      
+      logger.debug(`Transaction sent with signature: ${signature}`);
+      
+      // Step 7: Confirm the transaction
+      const confirmation = await connection.confirmTransaction(signature, 'processed');
+      
+      if (confirmation.value.err) {
+        logger.error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+        throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+      }
+      
+      logger.debug(`Transaction successful: ${signature}`);
+      return {
+        signature,
+        confirmationStatus: 'confirmed',
+        outAmount: quote.outAmount,
+        priceImpact: quote.priceImpactPct
+      };
     } catch (error) {
-      logger.debug('Error executing swap:', error);
-      throw new Error(`Error executing swap: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error("Failed to complete swap:", error);
+      throw error;
     }
+  }
+  
+  /**
+   * Format quote result in a user-friendly way
+   * @param quote Quote response from Jupiter API
+   * @param inputAmount Original input amount
+   * @param slippageBps Slippage tolerance in basis points
+   * @returns Formatted quote summary
+   */
+  formatQuoteResult(quote: QuoteResponse, inputAmount: string, slippageBps: number = 50): string {
+    return `Quote Summary:
+Input Token: ${quote.inputMint}
+Output Token: ${quote.outputMint}
+Input Amount: ${quote.inAmount || inputAmount}
+Output Amount: ${quote.outAmount}
+Price Impact: ${quote.priceImpactPct || "0"}%
+Slippage Tolerance: ${slippageBps / 100}%
+Route Hops: ${quote.routePlan?.length || 0}`;
+  }
+  
+  /**
+   * Format swap result in a user-friendly way
+   * @param result Swap result from Jupiter API
+   * @returns Formatted swap summary
+   */
+  formatSwapResult(result: SwapResult): string {
+    return `Swap executed successfully!
+Transaction signature: ${result.signature}
+Status: ${result.confirmationStatus}
+Output amount: ${result.outAmount || "Unknown"}
+Price impact: ${result.priceImpact || "Unknown"}%`;
   }
 }
 
