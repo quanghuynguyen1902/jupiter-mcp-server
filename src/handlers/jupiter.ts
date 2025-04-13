@@ -1,12 +1,17 @@
 import { ToolResultSchema } from "../types.js";
 import { createErrorResponse, createSuccessResponse, validatePublicKey } from "./utils.js";
-import { GetQuoteInput, BuildSwapTransactionInput, SendSwapTransactionInput } from "./jupiter.types.js";
+import { QuoteInput, SwapInput } from "./jupiter.types.js";
 import { PublicKey } from "@solana/web3.js";
 import { jupiterService } from "../services/jupiter.js";
 import { walletService } from "../services/wallet.js";
 import { logger } from "../utils/logger.js";
 
-export const getQuoteHandler = async (input: GetQuoteInput): Promise<ToolResultSchema> => {
+/**
+ * Handler for getting a quote for token swap
+ * @param input Quote parameters
+ * @returns Success or error response with quote details
+ */
+export const getQuoteHandler = async (input: QuoteInput): Promise<ToolResultSchema> => {
   try {
     // Validate input and output mints
     const inputMintResult = validatePublicKey(input.inputMint);
@@ -19,59 +24,41 @@ export const getQuoteHandler = async (input: GetQuoteInput): Promise<ToolResultS
       return outputMintResult;
     }
     
+    // Parse the slippage if provided or use default
+    const slippageBps = input.slippageBps || 50; // Default to 0.5%
+    
     // Ensure amount is an integer
-    const parsedAmount = parseInt(input.amount, 10);
-    if (isNaN(parsedAmount)) {
+    const amount = parseInt(input.amount, 10);
+    if (isNaN(amount)) {
       return createErrorResponse("Invalid amount. Please provide a valid number.");
     }
     
-    // Create a new input with parsed integer amount
-    const parsedInput = {
-      ...input,
-      amount: parsedAmount.toString()
-    };
+    // Use the Jupiter service to get a quote
+    logger.debug(`Getting quote from ${input.inputMint} to ${input.outputMint} for amount ${amount}`);
+    const quoteData = await jupiterService.getQuote({
+      inputMint: input.inputMint,
+      outputMint: input.outputMint,
+      amount: amount.toString(),
+      slippageBps,
+      onlyDirectRoutes: input.onlyDirectRoutes
+    });
     
-    // Use the Jupiter service to get the quote
-    const quoteData = await jupiterService.getQuote(parsedInput);
+    // Format the quote in a user-friendly way
+    const formattedQuote = jupiterService.formatQuoteResult(quoteData, input.amount, slippageBps);
     
-    return createSuccessResponse(`Quote: ${JSON.stringify(quoteData, null, 2)}`);
+    return createSuccessResponse(formattedQuote);
   } catch (error) {
     logger.debug("Error in getQuoteHandler:", error);
     return createErrorResponse(`Error getting quote: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
-export const buildSwapTransactionHandler = async (input: BuildSwapTransactionInput): Promise<ToolResultSchema> => {
-  try {
-    // Validate user public key
-    const userPublicKeyResult = validatePublicKey(input.userPublicKey);
-    if (!(userPublicKeyResult instanceof PublicKey)) {
-      return userPublicKeyResult;
-    }
-    
-    // Use the Jupiter service to build the swap transaction
-    const swapData = await jupiterService.buildSwapTransaction(input);
-    
-    return createSuccessResponse(`Swap transaction: ${JSON.stringify(swapData, null, 2)}`);
-  } catch (error) {
-    logger.debug("Error in buildSwapTransactionHandler:", error);
-    return createErrorResponse(`Error building swap transaction: ${error instanceof Error ? error.message : String(error)}`);
-  }
-};
-
-export const sendSwapTransactionHandler = async (input: SendSwapTransactionInput): Promise<ToolResultSchema> => {
-  try {
-    // Use the Jupiter service to send the swap transaction
-    const swapResult = await jupiterService.sendSwapTransaction(input);
-    
-    return createSuccessResponse(`Swap result: ${JSON.stringify(swapResult, null, 2)}`);
-  } catch (error) {
-    logger.debug("Error in sendSwapTransactionHandler:", error);
-    return createErrorResponse(`Error sending swap transaction: ${error instanceof Error ? error.message : String(error)}`);
-  }
-};
-
-export const executeSwapHandler = async (input: GetQuoteInput): Promise<ToolResultSchema> => {
+/**
+ * Handler for executing a token swap
+ * @param input Swap parameters
+ * @returns Success or error response
+ */
+export const executeSwapHandler = async (input: SwapInput): Promise<ToolResultSchema> => {
   try {
     // Check if wallet is initialized
     if (!walletService.isInitialized) {
@@ -90,25 +77,28 @@ export const executeSwapHandler = async (input: GetQuoteInput): Promise<ToolResu
     }
     
     // Ensure amount is an integer
-    const parsedAmount = parseInt(input.amount, 10);
-    if (isNaN(parsedAmount)) {
+    const amount = parseInt(input.amount, 10);
+    if (isNaN(amount)) {
       return createErrorResponse("Invalid amount. Please provide a valid number.");
     }
     
-    // Create a new input with parsed integer amount
-    const parsedInput = {
-      ...input,
-      amount: parsedAmount.toString()
-    };
+    // Use the Jupiter service to execute the complete swap flow
+    logger.debug(`Executing swap from ${input.inputMint} to ${input.outputMint} for amount ${amount}`);
     
-    // Use the wallet service to execute the complete swap flow
-    const result = await jupiterService.executeSwap(parsedInput);
+    const result = await jupiterService.completeSwap({
+      inputMint: input.inputMint,
+      outputMint: input.outputMint,
+      amount: amount.toString(),
+      slippageBps: input.slippageBps,
+      onlyDirectRoutes: input.onlyDirectRoutes,
+      dynamicComputeUnits: input.dynamicComputeUnits,
+      dynamicSlippage: input.dynamicSlippage
+    });
     
-    if (result.txid) {
-      return createSuccessResponse(`Swap executed successfully! Transaction signature: ${result.txid}\n\nDetails: ${JSON.stringify(result.swapData || {}, null, 2)}`);
-    } else {
-      return createSuccessResponse(`Swap executed: ${JSON.stringify(result, null, 2)}`);
-    }
+    // Format the result in a user-friendly way
+    const formattedResult = jupiterService.formatSwapResult(result);
+    
+    return createSuccessResponse(formattedResult);
   } catch (error) {
     logger.debug("Error in executeSwapHandler:", error);
     return createErrorResponse(`Error executing swap: ${error instanceof Error ? error.message : String(error)}`);
