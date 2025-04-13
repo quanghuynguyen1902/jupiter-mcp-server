@@ -1,46 +1,100 @@
-export interface GetQuoteInput {
+/**
+ * Basic input parameters for a swap quote
+ */
+export interface QuoteInput {
+  /** Input token mint address */
   inputMint: string;
+  
+  /** Output token mint address */
   outputMint: string;
+  
+  /** Amount to swap in lamports/smallest units */
   amount: string;
+  
+  /** Slippage tolerance in basis points (e.g., 50 = 0.5%) */
   slippageBps?: number;
+  
+  /** Only use direct routes between input and output tokens */
   onlyDirectRoutes?: boolean;
-  asLegacyTransaction?: boolean;
-  maxAccounts?: number;
-  swapMode?: string;
-  excludeDexes?: string[];
-  platformFeeBps?: number;
 }
 
+/**
+ * Enhanced input for swap execution
+ */
+export interface SwapInput extends QuoteInput {
+  /** Optional dynamic compute unit flag */
+  dynamicComputeUnits?: boolean;
+  
+  /** Optional dynamic slippage flag */
+  dynamicSlippage?: boolean;
+}
+
+/**
+ * Quote response from Jupiter API
+ */
+export interface QuoteResponse {
+  inputMint: string;
+  outputMint: string;
+  inAmount?: string;
+  outAmount: string;
+  otherAmountThreshold?: string;
+  swapMode?: string;
+  slippageBps?: number;
+  platformFee?: any;
+  priceImpactPct?: string;
+  routePlan?: any[];
+  contextSlot?: number;
+}
+
+/**
+ * Response from Jupiter swap endpoint
+ */
+export interface SwapResponse {
+  swapTransaction: string;
+  lastValidBlockHeight?: number;
+  prioritizationFeeLamports?: number;
+  computeUnitLimit?: number;
+  prioritizationType?: {
+    computeBudget: {
+      microLamports: number;
+      estimatedMicroLamports: number;
+    };
+  };
+  dynamicSlippageReport?: {
+    slippageBps: number;
+    otherAmount: number;
+    simulatedIncurredSlippageBps: number;
+    amplificationRatio: string;
+    categoryName: string;
+    heuristicMaxSlippageBps: number;
+  };
+  simulationError: string | null;
+}
+
+/**
+ * Result of a complete swap transaction
+ */
+export interface SwapResult {
+  /** Transaction signature */
+  signature: string;
+  
+  /** Transaction confirmation status */
+  confirmationStatus: string;
+  
+  /** Output amount received in the swap */
+  outAmount?: string;
+  
+  /** Price impact percentage */
+  priceImpact?: string;
+}
+
+/**
+ * Priority level definitions for priority fees
+ */
 export interface PriorityLevel {
   priorityLevelWithMaxLamports: {
     maxLamports: number;
     priorityLevel: 'low' | 'medium' | 'high' | 'veryHigh';
+    global?: boolean;
   };
-}
-
-export interface BuildSwapTransactionInput {
-  quoteResponse: string | any;
-  userPublicKey: string;
-  prioritizationFeeLamports?: number | PriorityLevel;
-  computeUnitPriceMicroLamports?: number;
-  asLegacyTransaction?: boolean;
-  dynamicComputeUnitLimit?: boolean;
-}
-
-export interface SendSwapTransactionInput {
-  swapTransaction: string | any;
-  serializedTransaction?: string;
-  skipPreflight?: boolean;
-  maxRetries?: number;
-}
-
-// Type alias for executive swap, which uses the same input as GetQuoteInput
-export type ExecuteSwapInput = GetQuoteInput;
-
-// Response from lite-api swap endpoint
-export interface LiteApiSwapResponse {
-  transaction: string;
-  encodedTransaction?: string;
-  needsSignature?: boolean;
-  signers?: string[];
 }
