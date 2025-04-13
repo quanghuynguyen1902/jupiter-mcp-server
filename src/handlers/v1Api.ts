@@ -1,6 +1,6 @@
 import { ToolResultSchema } from "../types.js";
 import { createErrorResponse, createSuccessResponse, validatePublicKey } from "./utils.js";
-import { GetQuoteInput } from "./jupiter.types.js";
+import { GetV1QuoteInput, ExecuteV1SwapInput } from "./v1Api.types.js";
 import { PublicKey } from "@solana/web3.js";
 import { v1ApiClient } from "../services/v1Api.js";
 import { walletService } from "../services/wallet.js";
@@ -11,7 +11,7 @@ import { logger } from "../utils/logger.js";
  * @param input Swap parameters
  * @returns Success or error response
  */
-export const executeV1SwapHandler = async (input: GetQuoteInput): Promise<ToolResultSchema> => {
+export const executeV1SwapHandler = async (input: ExecuteV1SwapInput): Promise<ToolResultSchema> => {
   try {
     // Check if wallet is initialized
     if (!walletService.isInitialized) {
@@ -44,10 +44,17 @@ export const executeV1SwapHandler = async (input: GetQuoteInput): Promise<ToolRe
       input.inputMint,
       input.outputMint,
       amount,
-      slippageBps
+      slippageBps,
+      input.onlyDirectRoutes,
+      input.dynamicComputeUnits,
+      input.dynamicSlippage
     );
     
-    return createSuccessResponse(`Swap executed successfully using Jupiter V1 API! Transaction signature: ${result.signature}\nStatus: ${result.confirmationStatus}`);
+    return createSuccessResponse(`Swap executed successfully using Jupiter V1 API!
+Transaction signature: ${result.signature}
+Status: ${result.confirmationStatus}
+Output amount: ${result.outAmount || "Unknown"}
+Price impact: ${result.priceImpact || "Unknown"}`);
   } catch (error) {
     logger.debug("Error in executeV1SwapHandler:", error);
     return createErrorResponse(`Error executing V1 API swap: ${error instanceof Error ? error.message : String(error)}`);
@@ -59,7 +66,7 @@ export const executeV1SwapHandler = async (input: GetQuoteInput): Promise<ToolRe
  * @param input Quote parameters
  * @returns Success or error response with quote details
  */
-export const getV1QuoteHandler = async (input: GetQuoteInput): Promise<ToolResultSchema> => {
+export const getV1QuoteHandler = async (input: GetV1QuoteInput): Promise<ToolResultSchema> => {
   try {
     // Validate input and output mints
     const inputMintResult = validatePublicKey(input.inputMint);
@@ -91,7 +98,25 @@ export const getV1QuoteHandler = async (input: GetQuoteInput): Promise<ToolResul
       restrictIntermediateTokens: input.onlyDirectRoutes !== true
     });
     
-    return createSuccessResponse(`V1 API Quote: ${JSON.stringify(quoteData, null, 2)}`);
+    // Format the quote data in a more readable way
+    const formattedResponse = {
+      inputMint: quoteData.inputMint,
+      outputMint: quoteData.outputMint,
+      inAmount: quoteData.inAmount || input.amount,
+      outAmount: quoteData.outAmount,
+      priceImpactPct: quoteData.priceImpactPct || "0",
+      slippageBps: slippageBps,
+      routePlanLength: quoteData.routePlan?.length || 0
+    };
+    
+    return createSuccessResponse(`V1 API Quote Summary:
+Input Token: ${formattedResponse.inputMint}
+Output Token: ${formattedResponse.outputMint}
+Input Amount: ${formattedResponse.inAmount}
+Output Amount: ${formattedResponse.outAmount}
+Price Impact: ${formattedResponse.priceImpactPct}%
+Slippage Tolerance: ${formattedResponse.slippageBps / 100}%
+Route Hops: ${formattedResponse.routePlanLength}`);
   } catch (error) {
     logger.debug("Error in getV1QuoteHandler:", error);
     return createErrorResponse(`Error getting V1 API quote: ${error instanceof Error ? error.message : String(error)}`);
