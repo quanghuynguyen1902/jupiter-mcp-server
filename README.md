@@ -13,8 +13,7 @@ The MCP server exposes several tools to Claude:
 
 ## API Implementation
 
-This server uses two Jupiter APIs:
-- **Quote API v6** (`https://quote-api.jup.ag/v6`) for getting swap quotes
+This server uses Jupiter APIs:
 - **Lite API v1** (`https://lite-api.jup.ag/swap/v1`) for executing swaps
 
 The Lite API provides a simplified interface for building and executing swaps in a single request, which improves reliability.
