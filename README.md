@@ -78,8 +78,8 @@ To configure Claude Desktop to use this MCP server with environment variables fo
 {
   "mcpServers": {
     "jupiter-mcp-server": {
-      "command": "jupiter-mcp-server",
-      "args": [],
+      "command": "npx",
+      "args": ["jupiter-mcp-server"],
       "env": {
         "SOLANA_PRIVATE_KEY": "your_private_key_in_base58_format",
         "SOLANA_RPC_ENDPOINT": "https://api.mainnet-beta.solana.com",

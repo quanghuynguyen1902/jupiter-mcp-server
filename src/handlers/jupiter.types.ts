@@ -4,16 +4,16 @@
 export interface QuoteInput {
   /** Input token mint address */
   inputMint: string;
-  
+
   /** Output token mint address */
   outputMint: string;
-  
+
   /** Amount to swap in lamports/smallest units */
   amount: string;
-  
+
   /** Slippage tolerance in basis points (e.g., 50 = 0.5%) */
   slippageBps?: number;
-  
+
   /** Only use direct routes between input and output tokens */
   onlyDirectRoutes?: boolean;
 }
@@ -24,7 +24,7 @@ export interface QuoteInput {
 export interface SwapInput extends QuoteInput {
   /** Optional dynamic compute unit flag */
   dynamicComputeUnits?: boolean;
-  
+
   /** Optional dynamic slippage flag */
   dynamicSlippage?: boolean;
 }
@@ -77,13 +77,13 @@ export interface SwapResponse {
 export interface SwapResult {
   /** Transaction signature */
   signature: string;
-  
+
   /** Transaction confirmation status */
   confirmationStatus: string;
-  
+
   /** Output amount received in the swap */
   outAmount?: string;
-  
+
   /** Price impact percentage */
   priceImpact?: string;
 }
@@ -97,4 +97,44 @@ export interface PriorityLevel {
     priorityLevel: 'low' | 'medium' | 'high' | 'veryHigh';
     global?: boolean;
   };
+}
+
+/**
+ * Input parameters for token search
+ */
+export interface SearchTokenInput {
+  /** Search term (token symbol or name) */
+  symbol: string;
+
+  /** Whether to include unknown/unvetted tokens in results */
+  includeUnknown?: boolean;
+
+  /** Whether to only return verified tokens */
+  onlyVerified?: boolean;
+}
+
+/**
+ * Token information structure
+ */
+export interface TokenInfo {
+  /** Token symbol (e.g., SOL, USDC) */
+  symbol: string;
+
+  /** Token name (e.g., Solana, USD Coin) */
+  name: string;
+
+  /** Token mint address */
+  address: string;
+
+  /** Token logo URI */
+  logoURI?: string;
+
+  /** Number of decimal places */
+  decimals: number;
+
+  /** Token tags */
+  tags?: string[];
+
+  /** Whether token is verified */
+  verified?: boolean;
 }

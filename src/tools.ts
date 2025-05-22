@@ -1,4 +1,4 @@
-import { getQuoteHandler, executeSwapHandler } from "./handlers/jupiter.js";
+import { getQuoteHandler, executeSwapHandler, searchTokenHandler } from "./handlers/jupiter.js";
 
 export const tools = [
   {
@@ -32,6 +32,19 @@ export const tools = [
       },
       required: ["inputMint", "outputMint", "amount"]
     }
+  },
+  {
+    name: "jupiter_search_token",
+    description: "Search for token mints by symbol or name on Solana",
+    inputSchema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string" },
+        includeUnknown: { type: "boolean" },
+        onlyVerified: { type: "boolean" }
+      },
+      required: ["symbol"]
+    }
   }
 ];
 
@@ -39,5 +52,6 @@ type handlerDictionary = Record<typeof tools[number]["name"], (input: any) => an
 
 export const handlers: handlerDictionary = {
   "jupiter_get_quote": getQuoteHandler,
-  "jupiter_execute_swap": executeSwapHandler
+  "jupiter_execute_swap": executeSwapHandler,
+  "jupiter_search_token": searchTokenHandler
 };
