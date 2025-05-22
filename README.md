@@ -1,3 +1,5 @@
+[![MseeP Badge](https://mseep.net/pr/quanghuynguyen1902-jupiter-mcp-server-badge.jpg)](https://mseep.ai/app/quanghuynguyen1902-jupiter-mcp-server)
+
 # Jupiter MCP Server
 
 This repository contains a Model Context Protocol (MCP) server that provides Claude with access to Jupiter's swap API. The server enables Claude to perform operations like getting quotes, building swap transactions, and sending swap transactions on the Solana blockchain using Jupiter.
