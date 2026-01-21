@@ -21,7 +21,7 @@ if (!['mainnet-beta', 'testnet', 'devnet'].includes(network)) {
 export const config = {
   server: {
     name: 'jupiter-mcp-server',
-    version: '1.0.0',
+    version: '1.4.0',
   },
   solana: {
     network: network as 'mainnet-beta' | 'testnet' | 'devnet',
@@ -29,8 +29,9 @@ export const config = {
     privateKey: process.env.SOLANA_PRIVATE_KEY || '',
   },
   jupiter: {
-    apiBaseUrl: 'https://lite-api.jup.ag/swap/v1',
-    liteApiBaseUrl: 'https://lite-api.jup.ag/swap/v1'
+    portfolioApiBaseUrl: 'https://api.jup.ag/portfolio/v1',
+    priceApiBaseUrl: 'https://api.jup.ag/price/v3',
+    apiKey: process.env.JUPITER_API_KEY || ''
   }
 };
 

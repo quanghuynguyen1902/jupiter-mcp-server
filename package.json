@@ -1,7 +1,7 @@
 {
   "name": "jupiter-mcp-server",
-  "version": "1.2.2",
-  "description": "Model Context Protocol server providing Claude AI with access to Jupiter's optimized swap API on Solana",
+  "version": "1.4.0",
+  "description": "Model Context Protocol server providing Claude AI with access to Jupiter's Portfolio API and Price API on Solana",
   "main": "build/index.js",
   "type": "module",
   "scripts": {

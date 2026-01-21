@@ -1,68 +1,45 @@
-import { Keypair, Connection, VersionedTransaction } from "@solana/web3.js";
 import { config } from "../config.js";
 import { logger } from "../utils/logger.js";
-import { walletService } from "./wallet.js";
 import {
-  QuoteInput,
-  SwapInput,
-  QuoteResponse,
-  SwapResponse,
-  SwapResult,
-  PriorityLevel,
-  TokenInfo,
-  SearchTokenInput,
+  GetPositionsInput,
+  GetStakedJupInput,
+  PortfolioPositionsResponse,
+  StakedJupResponse,
+  PlatformInfo,
+  GetPriceInput,
+  PriceResponse,
 } from "../handlers/jupiter.types.js";
-// Import bs58 for decoding private keys
-import bs58 from "bs58";
 // Ensure fetch is available
 import "../utils/fetch.js";
 
 /**
- * Jupiter API service for optimized swap performance
- * Combines the best of both v1Api and jupiter implementations
+ * Jupiter API service for Portfolio and Price APIs
  */
 export class JupiterService {
-  private readonly baseUrl: string;
-  private readonly tokenListUrl: string = "https://token.jup.ag/all";
-  private tokenList: TokenInfo[] = [];
-  private isTokenListInitialized: boolean = false;
-  private lastTokenListFetchTime: number = 0;
-  // Cache duration (1 hour)
-  private readonly CACHE_DURATION: number = 60 * 60 * 1000;
-
   constructor() {
-    this.baseUrl = config.jupiter.apiBaseUrl;
   }
 
   /**
-   * Get a quote for swapping tokens
-   * @param params Quote parameters
-   * @returns Quote response
+   * Get portfolio positions for a wallet address
+   * @param params GetPositionsInput parameters
+   * @returns Portfolio positions response
    */
-  async getQuote(params: QuoteInput): Promise<QuoteResponse> {
+  async getPositions(params: GetPositionsInput): Promise<PortfolioPositionsResponse> {
     try {
-      const url = new URL(`${this.baseUrl}/quote`);
-      url.searchParams.append("inputMint", params.inputMint);
-      url.searchParams.append("outputMint", params.outputMint);
-      url.searchParams.append("amount", params.amount.toString());
+      const url = new URL(`${config.jupiter.portfolioApiBaseUrl}/positions/${params.address}`);
 
-      if (params.slippageBps !== undefined) {
-        url.searchParams.append("slippageBps", params.slippageBps.toString());
-      } else {
-        // Default slippage of 0.5%
-        url.searchParams.append("slippageBps", "50");
+      if (params.platforms) {
+        url.searchParams.append("platforms", params.platforms);
       }
 
-      // Handle route restrictions (direct routes setting)
-      if (params.onlyDirectRoutes === true) {
-        url.searchParams.append("onlyDirectRoutes", "true");
-      } else {
-        // By default, enable restrictIntermediateTokens for more stable routes
-        url.searchParams.append("restrictIntermediateTokens", "true");
+      logger.debug(`Getting portfolio positions for address: ${params.address}`);
+
+      const headers: Record<string, string> = {};
+      if (config.jupiter.apiKey) {
+        headers['x-api-key'] = config.jupiter.apiKey;
       }
 
-      logger.debug(`Getting quote with params: ${url.toString()}`);
-      const response = await fetch(url.toString());
+      const response = await fetch(url.toString(), { headers });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -71,63 +48,32 @@ export class JupiterService {
         );
       }
 
-      const data: QuoteResponse = await response.json();
-      logger.debug("Quote received successfully");
+      const data: PortfolioPositionsResponse = await response.json();
+      logger.debug(`Retrieved ${data.elements?.length || 0} portfolio positions`);
       return data;
     } catch (error) {
-      logger.error("Error fetching quote:", error);
+      logger.error("Error fetching portfolio positions:", error);
       throw error;
     }
   }
 
   /**
-   * Execute a swap transaction with optimized parameters
-   * @param quoteResponse Quote response from getQuote
-   * @param userPublicKey User's public key
-   * @param dynamicComputeUnitLimit Use dynamic compute unit estimation
-   * @param dynamicSlippage Use dynamic slippage estimation
-   * @returns Execute response with transaction details
+   * Get staked JUP tokens for a wallet address
+   * @param params GetStakedJupInput parameters
+   * @returns Staked JUP response
    */
-  async executeSwap(
-    quoteResponse: QuoteResponse,
-    userPublicKey: string,
-    dynamicComputeUnitLimit: boolean = true,
-    dynamicSlippage: boolean = true,
-    priorityFee?: PriorityLevel,
-  ): Promise<SwapResponse> {
+  async getStakedJup(params: GetStakedJupInput): Promise<StakedJupResponse> {
     try {
-      logger.debug("Building swap transaction");
+      const url = `${config.jupiter.portfolioApiBaseUrl}/staked-jup/${params.address}`;
 
-      // Prepare the request body
-      const requestBody: any = {
-        quoteResponse,
-        userPublicKey,
-        dynamicComputeUnitLimit,
-        dynamicSlippage,
-      };
+      logger.debug(`Getting staked JUP for address: ${params.address}`);
 
-      // Add priority fee if specified, otherwise use default
-      if (priorityFee) {
-        requestBody.prioritizationFeeLamports = priorityFee;
-      } else {
-        // Default priority fee optimization
-        requestBody.prioritizationFeeLamports = {
-          priorityLevelWithMaxLamports: {
-            maxLamports: 1000000, // Cap fee at 0.001 SOL
-            global: false, // Use local fee market for better estimation
-            priorityLevel: "veryHigh", // 75th percentile for better landing
-          },
-        };
+      const headers: Record<string, string> = {};
+      if (config.jupiter.apiKey) {
+        headers['x-api-key'] = config.jupiter.apiKey;
       }
 
-      // Make the API request to the swap endpoint
-      const response = await fetch(`${this.baseUrl}/swap`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const response = await fetch(url, { headers });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -136,177 +82,32 @@ export class JupiterService {
         );
       }
 
-      const data: SwapResponse = await response.json();
-      logger.debug("Swap transaction built successfully");
+      const data: StakedJupResponse = await response.json();
+      logger.debug(`Staked JUP: ${data.stakedAmount}, Unstaking entries: ${data.unstaking?.length || 0}`);
       return data;
     } catch (error) {
-      logger.error("Error building swap transaction:", error);
+      logger.error("Error fetching staked JUP:", error);
       throw error;
     }
   }
 
   /**
-   * Execute a complete swap transaction from quote to execution
-   * @param params Swap parameters
-   * @returns Transaction details including signature and confirmation
+   * Get list of available platforms
+   * @returns Array of platform information
    */
-  async completeSwap(params: SwapInput): Promise<SwapResult> {
+  async getPlatforms(): Promise<PlatformInfo[]> {
     try {
-      if (!walletService.isInitialized) {
-        throw new Error("Wallet not initialized. Cannot execute swap.");
+      const url = `${config.jupiter.portfolioApiBaseUrl}/platforms`;
+
+      logger.debug("Getting list of platforms");
+
+      const headers: Record<string, string> = {};
+      if (config.jupiter.apiKey) {
+        headers['x-api-key'] = config.jupiter.apiKey;
       }
 
-      // Ensure amount is a valid number
-      const amount = parseInt(params.amount, 10);
-      if (isNaN(amount)) {
-        throw new Error("Invalid amount. Please provide a valid number.");
-      }
+      const response = await fetch(url, { headers });
 
-      // Parse the slippage if provided or use default
-      const slippageBps = params.slippageBps || 50; // Default to 0.5%
-
-      logger.debug(
-        `Executing swap from ${params.inputMint} to ${params.outputMint} for amount ${amount}`,
-      );
-
-      // Step 1: Get quote
-      const quote = await this.getQuote({
-        inputMint: params.inputMint,
-        outputMint: params.outputMint,
-        amount: amount.toString(),
-        slippageBps,
-        onlyDirectRoutes: params.onlyDirectRoutes,
-      });
-
-      logger.debug(`Quote received, expected output: ${quote.outAmount}`);
-      if (quote.priceImpactPct) {
-        logger.debug(`Price impact: ${quote.priceImpactPct}%`);
-      }
-
-      // Step 2: Execute swap
-      const executeResponse = await this.executeSwap(
-        quote,
-        walletService.publicKeyString,
-        params.dynamicComputeUnits !== false, // Default to true
-        params.dynamicSlippage !== false, // Default to true
-      );
-
-      if (executeResponse.simulationError) {
-        throw new Error(`Simulation error: ${executeResponse.simulationError}`);
-      }
-
-      // Step 3: Deserialize the transaction
-      const transactionBinary = Buffer.from(
-        executeResponse.swapTransaction,
-        "base64",
-      );
-      const transaction = VersionedTransaction.deserialize(transactionBinary);
-
-      // Step 4: Sign the transaction with the wallet
-      const decodedKey = bs58.decode(config.solana.privateKey);
-      const keypair = Keypair.fromSecretKey(decodedKey);
-      transaction.sign([keypair]);
-
-      // Step 5: Serialize the transaction back to binary format
-      const signedTransactionBinary = transaction.serialize();
-
-      // Step 6: Send the transaction
-      logger.debug("Sending signed transaction to Solana network...");
-      const connection = new Connection(config.solana.rpcEndpoint, "confirmed");
-
-      const signature = await connection.sendRawTransaction(
-        signedTransactionBinary,
-        {
-          maxRetries: 2,
-          skipPreflight: true,
-        },
-      );
-
-      logger.debug(`Transaction sent with signature: ${signature}`);
-
-      // Step 7: Confirm the transaction
-      const confirmation = await connection.confirmTransaction(
-        signature,
-        "processed",
-      );
-
-      if (confirmation.value.err) {
-        logger.error(
-          `Transaction failed: ${JSON.stringify(confirmation.value.err)}`,
-        );
-        throw new Error(
-          `Transaction failed: ${JSON.stringify(confirmation.value.err)}`,
-        );
-      }
-
-      logger.debug(`Transaction successful: ${signature}`);
-      return {
-        signature,
-        confirmationStatus: "confirmed",
-        outAmount: quote.outAmount,
-        priceImpact: quote.priceImpactPct,
-      };
-    } catch (error) {
-      logger.error("Failed to complete swap:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Format quote result in a user-friendly way
-   * @param quote Quote response from Jupiter API
-   * @param inputAmount Original input amount
-   * @param slippageBps Slippage tolerance in basis points
-   * @returns Formatted quote summary
-   */
-  formatQuoteResult(
-    quote: QuoteResponse,
-    inputAmount: string,
-    slippageBps: number = 50,
-  ): string {
-    return `Quote Summary:
-            Input Token: ${quote.inputMint}
-            Output Token: ${quote.outputMint}
-            Input Amount: ${quote.inAmount || inputAmount}
-            Output Amount: ${quote.outAmount}
-            Price Impact: ${quote.priceImpactPct || "0"}%
-            Slippage Tolerance: ${slippageBps / 100}%
-            Route Hops: ${quote.routePlan?.length || 0}`;
-  }
-
-  /**
-   * Format swap result in a user-friendly way
-   * @param result Swap result from Jupiter API
-   * @returns Formatted swap summary
-   */
-  formatSwapResult(result: SwapResult): string {
-    return `Swap executed successfully!
-          Transaction signature: ${result.signature}
-          Status: ${result.confirmationStatus}
-          Output amount: ${result.outAmount || "Unknown"}
-          Price impact: ${result.priceImpact || "Unknown"}%`;
-  }
-
-  /**
-   * Load token list from Jupiter API
-   * @returns Promise that resolves when token list is loaded
-   */
-  async loadTokenList(): Promise<void> {
-    try {
-      const now = Date.now();
-      // If loaded within the last hour, don't reload
-      if (
-        this.isTokenListInitialized &&
-        now - this.lastTokenListFetchTime < this.CACHE_DURATION
-      ) {
-        logger.debug("Using cached token list");
-        return;
-      }
-
-      logger.debug("Loading token list from Jupiter API...");
-
-      // Use Jupiter API to fetch token list
-      const response = await fetch(this.tokenListUrl);
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
@@ -314,132 +115,174 @@ export class JupiterService {
         );
       }
 
-      const data = await response.json();
-      this.tokenList = data.map((token: any) => ({
-        symbol: token.symbol,
-        name: token.name,
-        address: token.address,
-        logoURI: token.logoURI,
-        decimals: token.decimals,
-        tags: token.tags,
-        verified: !token.tags?.includes("unvetted"),
-      }));
-
-      logger.debug(`Loaded ${this.tokenList.length} tokens`);
-      this.isTokenListInitialized = true;
-      this.lastTokenListFetchTime = now;
+      const data: PlatformInfo[] = await response.json();
+      logger.debug(`Retrieved ${data.length} platforms`);
+      return data;
     } catch (error) {
-      logger.error("Error loading token list:", error);
+      logger.error("Error fetching platforms:", error);
       throw error;
     }
   }
 
   /**
-   * Search tokens by symbol
-   * @param query Search query symbol
-   * @param options Search options
-   * @returns Matching tokens
+   * Format portfolio positions in a user-friendly way
+   * @param positions Portfolio positions response
+   * @returns Formatted positions summary
    */
-  async searchTokens(
-    query: string,
-    options: { includeUnknown?: boolean; onlyVerified?: boolean } = {},
-  ): Promise<TokenInfo[]> {
-    try {
-      // Ensure token list is loaded
-      if (!this.isTokenListInitialized) {
-        await this.loadTokenList();
-      }
+  formatPositionsResult(positions: PortfolioPositionsResponse): string {
+    let result = `Portfolio Summary for ${positions.owner}\n`;
+    result += `Query Time: ${new Date(positions.date).toLocaleString()}\n`;
+    result += `Duration: ${positions.duration}ms\n\n`;
 
-      // Normalize search query
-      const normalizedQuery = query.toLowerCase().trim();
+    if (!positions.elements || positions.elements.length === 0) {
+      return result + "No positions found.";
+    }
 
-      logger.debug(`Searching for token with query: "${normalizedQuery}"`);
+    // Calculate total value
+    const totalValue = positions.elements.reduce((sum, el) => sum + (el.value || 0), 0);
+    result += `Total Portfolio Value: $${totalValue.toFixed(2)}\n\n`;
 
-      // Filter matching tokens - ONLY exact symbol match
-      let results = this.tokenList.filter((token) => {
-        // Chỉ exact match với symbol
-        const exactSymbolMatch = token.symbol.toLowerCase() === normalizedQuery;
+    // Group by type
+    const byType = positions.elements.reduce((acc, el) => {
+      if (!acc[el.type]) acc[el.type] = [];
+      acc[el.type].push(el);
+      return acc;
+    }, {} as Record<string, typeof positions.elements>);
 
-        // Apply filters
-        let passesFilters = true;
-
-        if (options.onlyVerified && !token.verified) {
-          passesFilters = false;
+    // Display positions by type
+    Object.entries(byType).forEach(([type, elements]) => {
+      result += `${type}:\n`;
+      elements.forEach((el) => {
+        result += `  • ${el.label} (${el.platformId})\n`;
+        result += `    Value: $${el.value.toFixed(2)}\n`;
+        if (el.data?.assets && el.data.assets.length > 0) {
+          result += `    Assets: ${el.data.assets.length} token(s)\n`;
         }
-
-        if (!options.includeUnknown && token.tags?.includes("unvetted")) {
-          passesFilters = false;
-        }
-
-        return exactSymbolMatch && passesFilters;
       });
+      result += "\n";
+    });
 
-      // Sort by verified status only (since all are exact matches)
-      results.sort((a, b) => {
-        if (a.verified && !b.verified) return -1;
-        if (!a.verified && b.verified) return 1;
-        return 0;
-      });
-
-      logger.debug(`Found ${results.length} tokens matching "${query}"`);
-
-      return results.slice(0, 10);
-    } catch (error) {
-      logger.error("Error searching tokens:", error);
-      throw error;
-    }
+    return result;
   }
 
   /**
-   * Get token info by mint address
-   * @param mintAddress Token mint address
-   * @returns Token info or null if not found
+   * Format staked JUP in a user-friendly way
+   * @param stakedJup Staked JUP response
+   * @returns Formatted staked JUP summary
    */
-  async getTokenByMint(mintAddress: string): Promise<TokenInfo | null> {
-    try {
-      // Ensure token list is loaded
-      if (!this.isTokenListInitialized) {
-        await this.loadTokenList();
+  formatStakedJupResult(stakedJup: StakedJupResponse): string {
+    let result = `Staked JUP Summary:\n`;
+    result += `Currently Staked: ${stakedJup.stakedAmount.toLocaleString()} JUP\n\n`;
+
+    if (stakedJup.unstaking && stakedJup.unstaking.length > 0) {
+      result += `Unstaking Positions (${stakedJup.unstaking.length}):\n`;
+      stakedJup.unstaking.forEach((unstake, index) => {
+        const date = new Date(unstake.until * 1000);
+        result += `  ${index + 1}. Amount: ${unstake.amount.toLocaleString()} JUP\n`;
+        result += `     Available: ${date.toLocaleString()}\n`;
+      });
+    } else {
+      result += "No unstaking positions.";
+    }
+
+    return result;
+  }
+
+  /**
+   * Format platforms list in a user-friendly way
+   * @param platforms Array of platform information
+   * @returns Formatted platforms summary
+   */
+  formatPlatformsResult(platforms: PlatformInfo[]): string {
+    let result = `Available Platforms (${platforms.length}):\n\n`;
+
+    platforms.forEach((platform, index) => {
+      result += `${index + 1}. ${platform.name} (${platform.id})\n`;
+      result += `   ${platform.description}\n`;
+      if (platform.tags && platform.tags.length > 0) {
+        result += `   Tags: ${platform.tags.join(", ")}\n`;
       }
-
-      logger.debug(`Looking up token by mint address: ${mintAddress}`);
-
-      return (
-        this.tokenList.find(
-          (token) => token.address.toLowerCase() === mintAddress.toLowerCase(),
-        ) || null
-      );
-    } catch (error) {
-      logger.error("Error getting token by mint:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Format token search results in a user-friendly way
-   * @param tokens Array of matching tokens
-   * @param query Original search query
-   * @returns Formatted token results
-   */
-  formatTokenResults(tokens: TokenInfo[], query: string): string {
-    if (tokens.length === 0) {
-      return `No tokens found matching "${query}"`;
-    }
-
-    let result = `Found ${tokens.length} tokens matching "${query}":\n\n`;
-
-    tokens.forEach((token, index) => {
-      result += `${index + 1}. ${token.symbol} (${token.name})\n`;
-      result += `   Mint: ${token.address}\n`;
-      result += `   Decimals: ${token.decimals}\n`;
-      result += `   Verified: ${token.verified ? "Yes" : "No"}\n`;
-
-      if (index < tokens.length - 1) {
+      result += `   Deprecated: ${platform.isDeprecated ? "Yes" : "No"}\n`;
+      if (platform.links?.website) {
+        result += `   Website: ${platform.links.website}\n`;
+      }
+      if (index < platforms.length - 1) {
         result += "\n";
       }
     });
 
-    result += `\nYou can use any of these mint addresses for token swaps.`;
+    return result;
+  }
+
+  /**
+   * Get token prices from Jupiter Price API v3
+   * @param params GetPriceInput parameters
+   * @returns Price response with token prices
+   */
+  async getPrice(params: GetPriceInput): Promise<PriceResponse> {
+    try {
+      const url = new URL(config.jupiter.priceApiBaseUrl);
+      url.searchParams.append("ids", params.ids);
+
+      logger.debug(`Getting prices for tokens: ${params.ids}`);
+
+      const headers: Record<string, string> = {};
+      if (config.jupiter.apiKey) {
+        headers['x-api-key'] = config.jupiter.apiKey;
+      }
+
+      const response = await fetch(url.toString(), { headers });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`,
+        );
+      }
+
+      const data: PriceResponse = await response.json();
+      logger.debug(`Retrieved prices for ${Object.keys(data).length} tokens`);
+      return data;
+    } catch (error) {
+      logger.error("Error fetching token prices:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Format price response in a user-friendly way
+   * @param prices Price response from Jupiter API
+   * @returns Formatted price summary
+   */
+  formatPriceResult(prices: PriceResponse): string {
+    const tokenAddresses = Object.keys(prices);
+
+    if (tokenAddresses.length === 0) {
+      return "No price data found for the specified tokens.";
+    }
+
+    let result = `Token Prices (${tokenAddresses.length}):\n\n`;
+
+    tokenAddresses.forEach((address, index) => {
+      const price = prices[address];
+      result += `${index + 1}. ${address}\n`;
+      result += `   Price: $${price.usdPrice.toFixed(6)}\n`;
+      result += `   Decimals: ${price.decimals}\n`;
+
+      if (price.priceChange24h !== null && price.priceChange24h !== undefined) {
+        const change = price.priceChange24h;
+        const changeSign = change >= 0 ? "+" : "";
+        result += `   24h Change: ${changeSign}${change.toFixed(2)}%\n`;
+      }
+
+      if (price.blockId !== null && price.blockId !== undefined) {
+        result += `   Block ID: ${price.blockId}\n`;
+      }
+
+      if (index < tokenAddresses.length - 1) {
+        result += "\n";
+      }
+    });
 
     return result;
   }

@@ -1,49 +1,59 @@
-import { getQuoteHandler, executeSwapHandler, searchTokenHandler } from "./handlers/jupiter.js";
+import { getPositionsHandler, getStakedJupHandler, getPlatformsHandler, getPriceHandler } from "./handlers/jupiter.js";
 
 export const tools = [
   {
-    name: "jupiter_get_quote",
-    description: "Get a quote for swapping tokens on Jupiter",
+    name: "jupiter_get_positions",
+    description: "Get portfolio positions for a Solana wallet address including wallet balances, staked positions, liquidity pools, farming, vaults, lending, and more",
     inputSchema: {
       type: "object",
       properties: {
-        inputMint: { type: "string" },
-        outputMint: { type: "string" },
-        amount: { type: "string" },
-        slippageBps: { type: "number" },
-        onlyDirectRoutes: { type: "boolean" }
+        address: {
+          type: "string",
+          description: "Solana wallet address to query"
+        },
+        platforms: {
+          type: "string",
+          description: "Optional comma-separated list of platform IDs to filter results (e.g., 'jupiter-exchange,jupiter-governance')"
+        }
       },
-      required: ["inputMint", "outputMint", "amount"]
+      required: ["address"]
     }
   },
   {
-    name: "jupiter_execute_swap",
-    description: "Execute a token swap on Jupiter using wallet private key from environment variables",
+    name: "jupiter_get_staked_jup",
+    description: "Get staked JUP tokens information for a Solana wallet address, including amount staked and unstaking positions",
     inputSchema: {
       type: "object",
       properties: {
-        inputMint: { type: "string" },
-        outputMint: { type: "string" },
-        amount: { type: "string" },
-        slippageBps: { type: "number" },
-        onlyDirectRoutes: { type: "boolean" },
-        dynamicComputeUnits: { type: "boolean" },
-        dynamicSlippage: { type: "boolean" }
+        address: {
+          type: "string",
+          description: "Solana wallet address to query"
+        }
       },
-      required: ["inputMint", "outputMint", "amount"]
+      required: ["address"]
     }
   },
   {
-    name: "jupiter_search_token",
-    description: "Search for token mints by symbol or name on Solana",
+    name: "jupiter_get_platforms",
+    description: "Get a list of all DeFi platforms integrated with Jupiter's portfolio tracking system",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: "jupiter_get_price",
+    description: "Get current prices for one or more tokens on Jupiter, including USD price, 24h price change, and token decimals",
     inputSchema: {
       type: "object",
       properties: {
-        symbol: { type: "string" },
-        includeUnknown: { type: "boolean" },
-        onlyVerified: { type: "boolean" }
+        ids: {
+          type: "string",
+          description: "Comma-separated list of token mint addresses (e.g., 'So11111111111111111111111111111111111111112,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')"
+        }
       },
-      required: ["symbol"]
+      required: ["ids"]
     }
   }
 ];
@@ -51,7 +61,8 @@ export const tools = [
 type handlerDictionary = Record<typeof tools[number]["name"], (input: any) => any>;
 
 export const handlers: handlerDictionary = {
-  "jupiter_get_quote": getQuoteHandler,
-  "jupiter_execute_swap": executeSwapHandler,
-  "jupiter_search_token": searchTokenHandler
+  "jupiter_get_positions": getPositionsHandler,
+  "jupiter_get_staked_jup": getStakedJupHandler,
+  "jupiter_get_platforms": getPlatformsHandler,
+  "jupiter_get_price": getPriceHandler
 };

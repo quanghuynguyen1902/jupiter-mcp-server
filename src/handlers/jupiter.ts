@@ -1,153 +1,117 @@
 import { ToolResultSchema } from "../types.js";
 import { createErrorResponse, createSuccessResponse, validatePublicKey } from "./utils.js";
-import { QuoteInput, SwapInput, SearchTokenInput } from "./jupiter.types.js";
+import { GetPositionsInput, GetStakedJupInput, GetPriceInput } from "./jupiter.types.js";
 import { PublicKey } from "@solana/web3.js";
 import { jupiterService } from "../services/jupiter.js";
-import { walletService } from "../services/wallet.js";
 import { logger } from "../utils/logger.js";
 
 /**
- * Handler for getting a quote for token swap
- * @param input Quote parameters
- * @returns Success or error response with quote details
+ * Handler for getting portfolio positions
+ * @param input GetPositionsInput parameters
+ * @returns Success or error response with portfolio positions
  */
-export const getQuoteHandler = async (input: QuoteInput): Promise<ToolResultSchema> => {
+export const getPositionsHandler = async (input: GetPositionsInput): Promise<ToolResultSchema> => {
   try {
-    // Validate input and output mints
-    const inputMintResult = validatePublicKey(input.inputMint);
-    if (!(inputMintResult instanceof PublicKey)) {
-      return inputMintResult;
+    // Validate wallet address
+    const addressResult = validatePublicKey(input.address);
+    if (!(addressResult instanceof PublicKey)) {
+      return addressResult;
     }
 
-    const outputMintResult = validatePublicKey(input.outputMint);
-    if (!(outputMintResult instanceof PublicKey)) {
-      return outputMintResult;
-    }
+    logger.debug(`Getting portfolio positions for address: ${input.address}`);
 
-    // Parse the slippage if provided or use default
-    const slippageBps = input.slippageBps || 50; // Default to 0.5%
-
-    // Ensure amount is an integer
-    const amount = parseInt(input.amount, 10);
-    if (isNaN(amount)) {
-      return createErrorResponse("Invalid amount. Please provide a valid number.");
-    }
-
-    // Use the Jupiter service to get a quote
-    logger.debug(`Getting quote from ${input.inputMint} to ${input.outputMint} for amount ${amount}`);
-    const quoteData = await jupiterService.getQuote({
-      inputMint: input.inputMint,
-      outputMint: input.outputMint,
-      amount: amount.toString(),
-      slippageBps,
-      onlyDirectRoutes: input.onlyDirectRoutes
+    // Get portfolio positions
+    const positions = await jupiterService.getPositions({
+      address: input.address,
+      platforms: input.platforms
     });
 
-    // Format the quote in a user-friendly way
-    const formattedQuote = jupiterService.formatQuoteResult(quoteData, input.amount, slippageBps);
+    // Format the positions result
+    const formattedPositions = jupiterService.formatPositionsResult(positions);
 
-    return createSuccessResponse(formattedQuote);
+    return createSuccessResponse(formattedPositions);
   } catch (error) {
-    logger.debug("Error in getQuoteHandler:", error);
-    return createErrorResponse(`Error getting quote: ${error instanceof Error ? error.message : String(error)}`);
+    logger.debug("Error in getPositionsHandler:", error);
+    return createErrorResponse(`Error getting portfolio positions: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
 /**
- * Handler for executing a token swap
- * @param input Swap parameters
- * @returns Success or error response
+ * Handler for getting staked JUP tokens
+ * @param input GetStakedJupInput parameters
+ * @returns Success or error response with staked JUP details
  */
-export const executeSwapHandler = async (input: SwapInput): Promise<ToolResultSchema> => {
+export const getStakedJupHandler = async (input: GetStakedJupInput): Promise<ToolResultSchema> => {
   try {
-    // Check if wallet is initialized
-    if (!walletService.isInitialized) {
-      return createErrorResponse("Wallet not initialized. Cannot execute swap. Please check your environment variables for SOLANA_PRIVATE_KEY.");
+    // Validate wallet address
+    const addressResult = validatePublicKey(input.address);
+    if (!(addressResult instanceof PublicKey)) {
+      return addressResult;
     }
 
-    // Validate input and output mints
-    const inputMintResult = validatePublicKey(input.inputMint);
-    if (!(inputMintResult instanceof PublicKey)) {
-      return inputMintResult;
-    }
+    logger.debug(`Getting staked JUP for address: ${input.address}`);
 
-    const outputMintResult = validatePublicKey(input.outputMint);
-    if (!(outputMintResult instanceof PublicKey)) {
-      return outputMintResult;
-    }
-
-    // Ensure amount is an integer
-    const amount = parseInt(input.amount, 10);
-    if (isNaN(amount)) {
-      return createErrorResponse("Invalid amount. Please provide a valid number.");
-    }
-
-    // Use the Jupiter service to execute the complete swap flow
-    logger.debug(`Executing swap from ${input.inputMint} to ${input.outputMint} for amount ${amount}`);
-
-    const result = await jupiterService.completeSwap({
-      inputMint: input.inputMint,
-      outputMint: input.outputMint,
-      amount: amount.toString(),
-      slippageBps: input.slippageBps,
-      onlyDirectRoutes: input.onlyDirectRoutes,
-      dynamicComputeUnits: input.dynamicComputeUnits,
-      dynamicSlippage: input.dynamicSlippage
+    // Get staked JUP
+    const stakedJup = await jupiterService.getStakedJup({
+      address: input.address
     });
 
-    // Format the result in a user-friendly way
-    const formattedResult = jupiterService.formatSwapResult(result);
+    // Format the staked JUP result
+    const formattedStakedJup = jupiterService.formatStakedJupResult(stakedJup);
 
-    return createSuccessResponse(formattedResult);
+    return createSuccessResponse(formattedStakedJup);
   } catch (error) {
-    logger.debug("Error in executeSwapHandler:", error);
-    return createErrorResponse(`Error executing swap: ${error instanceof Error ? error.message : String(error)}`);
+    logger.debug("Error in getStakedJupHandler:", error);
+    return createErrorResponse(`Error getting staked JUP: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
 /**
- * Handler for searching token mints by symbol or name
- * @param input Search parameters
- * @returns Success or error response with token details
+ * Handler for getting available platforms
+ * @returns Success or error response with platforms list
  */
-export const searchTokenHandler = async (input: SearchTokenInput): Promise<ToolResultSchema> => {
+export const getPlatformsHandler = async (): Promise<ToolResultSchema> => {
+  try {
+    logger.debug("Getting available platforms");
+
+    // Get platforms
+    const platforms = await jupiterService.getPlatforms();
+
+    // Format the platforms result
+    const formattedPlatforms = jupiterService.formatPlatformsResult(platforms);
+
+    return createSuccessResponse(formattedPlatforms);
+  } catch (error) {
+    logger.debug("Error in getPlatformsHandler:", error);
+    return createErrorResponse(`Error getting platforms: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+/**
+ * Handler for getting token prices
+ * @param input GetPriceInput parameters
+ * @returns Success or error response with token prices
+ */
+export const getPriceHandler = async (input: GetPriceInput): Promise<ToolResultSchema> => {
   try {
     // Validate input
-    if (!input.symbol || input.symbol.trim() === "") {
-      return createErrorResponse("Invalid search term. Please provide a valid token symbol or name.");
+    if (!input.ids || input.ids.trim() === "") {
+      return createErrorResponse("Invalid input. Please provide at least one token mint address.");
     }
 
-    logger.debug(`Searching for tokens with query: ${input.symbol}`);
+    logger.debug(`Getting prices for tokens: ${input.ids}`);
 
-    // Default options
-    const includeUnknown: boolean = input.includeUnknown === true;
-    const onlyVerified: boolean = input.onlyVerified !== false; // Default to true
-
-    // Search tokens
-    const tokens = await jupiterService.searchTokens(input.symbol, {
-      includeUnknown,
-      onlyVerified
+    // Get token prices
+    const prices = await jupiterService.getPrice({
+      ids: input.ids
     });
 
-    if (tokens.length === 0) {
-      return createSuccessResponse(`No tokens found matching "${input.symbol}"`);
-    }
+    // Format the prices result
+    const formattedPrices = jupiterService.formatPriceResult(prices);
 
-    // Format the token results for response
-    const formattedTokens = tokens.map(token => ({
-      symbol: token.symbol,
-      name: token.name,
-      mint: token.address,
-      decimals: token.decimals,
-      verified: token.verified
-    }));
-
-    // Get formatted output
-    const formattedOutput = jupiterService.formatTokenResults(tokens, input.symbol);
-
-    return createSuccessResponse( `Found ${tokens.length} tokens matching "${input.symbol}"`);
+    return createSuccessResponse(formattedPrices);
   } catch (error) {
-    logger.debug("Error in searchTokenHandler:", error);
-    return createErrorResponse(`Error searching for tokens: ${error instanceof Error ? error.message : String(error)}`);
+    logger.debug("Error in getPriceHandler:", error);
+    return createErrorResponse(`Error getting token prices: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
