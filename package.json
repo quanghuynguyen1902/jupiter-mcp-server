@@ -36,5 +36,13 @@
     "mcp"
   ],
   "author": "quanghuynguyen1902",
-  "license": "MIT"
+  "license": "MIT",
+  "homepage": "https://github.com/quanghuynguyen1902/jupiter-mcp-server#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/quanghuynguyen1902/jupiter-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/quanghuynguyen1902/jupiter-mcp-server/issues"
+  }
 }
