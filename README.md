@@ -223,3 +223,9 @@ npm publish
 ## License
 
 MIT
+
+## Support the Project
+
+If Jupiter MCP Server is useful to you, consider [sponsoring its development](https://github.com/sponsors/quanghuynguyen1902).
+
+Your support helps maintain compatibility with Jupiter APIs, add new MCP tools, and improve the documentation.
