@@ -1,3 +1,5 @@
+[![MseeP Badge](https://mseep.net/pr/quanghuynguyen1902-jupiter-mcp-server-badge.jpg)](https://mseep.ai/app/quanghuynguyen1902-jupiter-mcp-server)
+
 # Jupiter MCP Server
 
 This repository contains a Model Context Protocol (MCP) server that provides Claude with access to Jupiter's Portfolio API and Price API. The server enables Claude to view portfolio positions, track staked JUP tokens, and get real-time token prices on the Solana blockchain.
